@@ -1,0 +1,22 @@
+#filter {
+    dock: top;
+    height: 3;
+}
+
+#file_list {
+    height: 1fr;
+}
+
+#output_dir {
+    height: 1;
+    background: $panel;
+    color: $text;
+    padding: 0 1;
+}
+
+#status {
+    height: 1;
+    background: $panel;
+    color: $text-muted;
+    padding: 0 1;
+}

@@ -171,8 +171,54 @@ def extract_files(
 
 
 @app.callback(invoke_without_command=True)
-def default(ctx: typer.Context):
-    """Default command — launches TUI (implemented in Phase 4)."""
+def default(
+    ctx: typer.Context,
+    claude_dir: Path = typer.Option(
+        Path.home() / ".claude",
+        "--claude-dir", "-c",
+        help="Path to Claude Code user config directory",
+    ),
+    output_dir: Path = typer.Option(
+        None,
+        "--output", "-o",
+        help="Output directory for recovered files (default: recovered-{timestamp})",
+    ),
+):
+    """Default command — launches the interactive TUI."""
     if ctx.invoked_subcommand is None:
-        console.print("[yellow]TUI not yet implemented. Use 'list-files' or 'extract-files'.[/yellow]")
-        raise typer.Exit()
+        if output_dir is None:
+            output_dir = _default_output_dir()
+        _launch_tui_impl(claude_dir, output_dir)
+
+
+@app.command("tui")
+def tui_command(
+    claude_dir: Path = typer.Option(
+        Path.home() / ".claude",
+        "--claude-dir", "-c",
+        help="Path to Claude Code user config directory",
+    ),
+    output_dir: Path = typer.Option(
+        None,
+        "--output", "-o",
+        help="Output directory for recovered files (default: recovered-{timestamp})",
+    ),
+):
+    """Launch the interactive TUI."""
+    if output_dir is None:
+        output_dir = _default_output_dir()
+    _launch_tui_impl(claude_dir, output_dir)
+
+
+def _launch_tui_impl(claude_dir: Path, output_dir: Path):
+    """Scan sessions and launch the Textual TUI."""
+    file_index = _scan_with_progress(claude_dir)
+    console.print(f"Found {len(file_index)} recoverable files. Launching TUI...")
+
+    from claude_recovery.tui.app import FileRecoveryApp
+    tui_app = FileRecoveryApp(
+        claude_dir=claude_dir,
+        output_dir=output_dir,
+        file_index=file_index,
+    )
+    tui_app.run()
