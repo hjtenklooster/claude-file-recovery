@@ -3,6 +3,8 @@
 .claude/
 claude-backup/
 output-*/
+recovered*/
+test-scripts/
 
 # Python
 __pycache__/
