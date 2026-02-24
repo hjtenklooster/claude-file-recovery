@@ -4,11 +4,13 @@ from pathlib import Path
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.fuzzy import Matcher
+from textual.containers import Horizontal
+from textual.reactive import reactive
 from textual.screen import Screen
-from textual.widgets import Footer, Input, SelectionList, Static
+from textual.widgets import Footer, Input, Label, SelectionList, Static
 from textual.widgets.selection_list import Selection
 
+from claude_recovery.core.filters import SearchMode, match_path, validate_regex, smart_case_sensitive
 from claude_recovery.core.models import RecoverableFile
 from claude_recovery.core.reconstructor import reconstruct_latest
 
@@ -24,6 +26,8 @@ class FileSelectionList(SelectionList):
 class FileListScreen(Screen):
     """Full-width file list with fuzzy search, multi-select, vim navigation."""
 
+    search_mode: reactive[SearchMode] = reactive(SearchMode.FUZZY)
+
     BINDINGS = [
         Binding("slash", "search", "Search", show=True),
         Binding("x", "toggle_select", "Select", show=True),
@@ -31,6 +35,7 @@ class FileListScreen(Screen):
         Binding("ctrl+a", "select_all_filtered", "Select All", show=True),
         Binding("ctrl+x", "deselect_all_filtered", "Deselect All", show=False),
         Binding("ctrl+e", "extract", "Extract", show=True),
+        Binding("ctrl+r", "cycle_mode", "Mode", show=True),
         Binding("enter", "open_detail", "Detail", show=True, priority=True),
         Binding("o", "change_output", "Output Dir", show=True),
         Binding("question_mark", "show_help", "Help", show=True),
@@ -50,7 +55,9 @@ class FileListScreen(Screen):
         self._filtered_paths: list[str] = []
 
     def compose(self) -> ComposeResult:
-        yield Input(placeholder="Press / to search...", id="filter")
+        with Horizontal(id="search_bar"):
+            yield Label("\\[FUZZY]", id="mode_label")
+            yield Input(placeholder="Press / to search...", id="filter")
         yield FileSelectionList(id="file_list")
         yield Static("", id="output_dir")
         yield Static("", id="status")
@@ -76,15 +83,39 @@ class FileListScreen(Screen):
         self._filtered_paths = []
 
         if self._search_query:
-            matcher = Matcher(self._search_query)
-            scored = []
-            for rf in self._all_files:
-                score = matcher.match(rf.path)
-                if score > 0:
-                    scored.append((score, rf))
-            scored.sort(key=lambda x: x[0], reverse=True)
-            items = [rf for _, rf in scored]
+            case_sensitive = smart_case_sensitive(self._search_query)
+            mode = self.search_mode
+
+            # Handle invalid regex gracefully
+            if mode is SearchMode.REGEX:
+                error = validate_regex(self._search_query)
+                mode_label = self.query_one("#mode_label", Label)
+                if error:
+                    mode_label.add_class("error")
+                    items = self._all_files  # show all files on invalid regex
+                else:
+                    mode_label.remove_class("error")
+                    items = [
+                        rf for rf in self._all_files
+                        if match_path(rf.path, self._search_query, mode, case_sensitive) > 0
+                    ]
+            elif mode is SearchMode.FUZZY:
+                scored = []
+                for rf in self._all_files:
+                    score = match_path(rf.path, self._search_query, mode, case_sensitive)
+                    if score > 0:
+                        scored.append((score, rf))
+                scored.sort(key=lambda x: x[0], reverse=True)
+                items = [rf for _, rf in scored]
+            else:
+                # GLOB mode — binary match, keep original order
+                items = [
+                    rf for rf in self._all_files
+                    if match_path(rf.path, self._search_query, mode, case_sensitive) > 0
+                ]
         else:
+            # Clear any error state when query is empty
+            self.query_one("#mode_label", Label).remove_class("error")
             items = self._all_files
 
         for rf in items:
@@ -131,6 +162,20 @@ class FileListScreen(Screen):
 
     def action_search(self) -> None:
         self.query_one("#filter", Input).focus()
+
+    _MODE_ORDER = [SearchMode.FUZZY, SearchMode.GLOB, SearchMode.REGEX]
+
+    def action_cycle_mode(self) -> None:
+        """Cycle search mode: FUZZY → GLOB → REGEX → FUZZY."""
+        idx = self._MODE_ORDER.index(self.search_mode)
+        self.search_mode = self._MODE_ORDER[(idx + 1) % len(self._MODE_ORDER)]
+
+    def watch_search_mode(self, mode: SearchMode) -> None:
+        """React to search mode changes — update label and re-filter."""
+        mode_label = self.query_one("#mode_label", Label)
+        mode_label.update(f"\\[{mode.value.upper()}]")
+        mode_label.remove_class("error")
+        self._repopulate_list()
 
     def action_toggle_select(self) -> None:
         file_list = self.query_one("#file_list", SelectionList)
@@ -198,7 +243,7 @@ class FileListScreen(Screen):
 
     def action_show_help(self) -> None:
         self.notify(
-            "/ Search  x Select  Space Selection-mode  Ctrl+A Select-all\n"
+            "/ Search  Ctrl+R Mode  x Select  Space Selection-mode  Ctrl+A Select-all\n"
             "Ctrl+E Extract  Enter Detail  o Output-dir  q Quit\n"
             "j/k Up/Down  g/G Top/Bottom",
             title="Keyboard Help",

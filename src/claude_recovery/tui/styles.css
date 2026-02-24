@@ -1,6 +1,27 @@
-#filter {
+#search_bar {
     dock: top;
     height: 3;
+    width: 100%;
+}
+
+#mode_label {
+    width: auto;
+    min-width: 8;
+    height: 3;
+    content-align: center middle;
+    padding: 1 1;
+    background: $primary;
+    color: $text;
+    text-style: bold;
+}
+
+#mode_label.error {
+    background: $error;
+    color: $text;
+}
+
+#filter {
+    width: 1fr;
 }
 
 #file_list {
