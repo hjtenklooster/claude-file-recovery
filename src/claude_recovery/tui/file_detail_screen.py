@@ -18,6 +18,7 @@ class FileDetailScreen(Screen):
         Binding("q", "go_back", "Back", show=True),
         Binding("escape", "go_back", "Back", show=False),
         Binding("enter", "extract_snapshot", "Extract", show=True, priority=True),
+        Binding("o", "change_output", "Output Dir", show=True),
         Binding("question_mark", "show_help", "Help", show=True),
         # Vim navigation
         Binding("j", "cursor_down", "Down", show=False),
@@ -37,9 +38,13 @@ class FileDetailScreen(Screen):
                 yield OptionList(id="snapshot_list")
             with VerticalScroll(id="preview_pane"):
                 yield Static("Select a snapshot to preview", id="file_content")
+        yield Static("", id="output_dir")
         yield Footer()
 
     def on_mount(self) -> None:
+        self.query_one("#output_dir", Static).update(
+            f" Output directory: {self.app.output_dir}"
+        )
         snapshot_list = self.query_one("#snapshot_list", OptionList)
         for op in self._display_ops:
             ts = op.timestamp[:16].replace("T", " ") if op.timestamp else "unknown"
@@ -100,9 +105,20 @@ class FileDetailScreen(Screen):
     def action_cursor_up(self) -> None:
         self.query_one("#snapshot_list", OptionList).action_cursor_up()
 
+    def action_change_output(self) -> None:
+        """Prompt for a new output directory via notification."""
+        app = self.app
+        self.notify(
+            f"Current output: {app.output_dir}\n"
+            "Use --output flag to change at startup.",
+            title="Output Directory",
+            timeout=4,
+        )
+
     def action_show_help(self) -> None:
         self.notify(
-            "j/k Navigate snapshots  Enter Extract snapshot  q Back",
+            "j/k Navigate snapshots  Enter Extract snapshot\n"
+            "o Output-dir  q Back",
             title="Keyboard Help",
             timeout=4,
         )
