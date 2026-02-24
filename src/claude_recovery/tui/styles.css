@@ -20,3 +20,25 @@
     color: $text-muted;
     padding: 0 1;
 }
+
+#detail_header {
+    dock: top;
+    height: 1;
+    background: $panel;
+    color: $text;
+    padding: 0 1;
+}
+
+#detail_panes {
+    height: 1fr;
+}
+
+#snapshots_pane {
+    width: 1fr;
+    border-right: solid $surface-lighten-2;
+}
+
+#preview_pane {
+    width: 2fr;
+    padding: 0 1;
+}
