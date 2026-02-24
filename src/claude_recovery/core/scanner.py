@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -42,13 +43,74 @@ def _extract_session_id(path: Path) -> str:
     return path.stem
 
 
-def scan_session(path: Path) -> list[FileOperation]:
-    """Scan a single JSONL session file for file-mutating tool calls.
+def strip_read_line_numbers(text: str) -> str:
+    """Strip line-number prefixes from Read tool output.
 
-    Phase 1: extracts file paths, timestamps, and operation types only.
-    Content fields are left as None — populated in Phase 2.
+    Format: right-aligned number + → (U+2192) + content
+    Example: '     1→first line'
+    """
+    lines = text.split("\n")
+    stripped = []
+    for line in lines:
+        # Match: optional whitespace + digits + → + rest
+        m = re.match(r"^\s*\d+\u2192(.*)", line)
+        if m:
+            stripped.append(m.group(1))
+        else:
+            stripped.append(line)
+    return "\n".join(stripped)
+
+
+def _enrich_from_tool_use_result(result: dict, pending_ops: dict[str, FileOperation]) -> None:
+    """Enrich a pending FileOperation with data from toolUseResult.
+
+    Write toolUseResult has: type, filePath, content, structuredPatch, originalFile
+    Edit toolUseResult has: filePath, oldString, newString, originalFile, structuredPatch, replaceAll
+    """
+    file_path = result.get("filePath", "")
+    if not file_path:
+        return
+
+    # Find the matching pending op by filePath.
+    # Match the most recent pending op for this path.
+    matching_op = None
+    for op in reversed(list(pending_ops.values())):
+        if op.file_path == file_path:
+            matching_op = op
+            break
+
+    if not matching_op:
+        return
+
+    result_type = result.get("type")
+    if result_type == "create":
+        matching_op.type = OpType.WRITE_CREATE
+        matching_op.content = result.get("content")
+        matching_op.original_file = None
+    elif result_type == "update":
+        matching_op.type = OpType.WRITE_UPDATE
+        matching_op.content = result.get("content")
+        matching_op.original_file = result.get("originalFile")
+    elif matching_op.type == OpType.EDIT:
+        # Edit toolUseResult — enrich with originalFile and confirmed strings
+        matching_op.original_file = result.get("originalFile")
+        if result.get("oldString"):
+            matching_op.old_string = result["oldString"]
+        if result.get("newString") is not None:
+            matching_op.new_string = result["newString"]
+        if "replaceAll" in result:
+            matching_op.replace_all = result["replaceAll"]
+
+
+def scan_session(path: Path) -> list[FileOperation]:
+    """Scan a single JSONL session file for file operations.
+
+    Extracts both metadata (file path, timestamp, type) and content
+    (toolUseResult fields for Write/Edit, inline content for Read).
     """
     ops: list[FileOperation] = []
+    # Map tool_use_id -> FileOperation for correlating with toolUseResult
+    pending_ops: dict[str, FileOperation] = {}
     is_subagent = _is_subagent_file(path)
     session_id = _extract_session_id(path)
 
@@ -81,27 +143,37 @@ def scan_session(path: Path) -> list[FileOperation]:
                         continue
 
                     if name == "Write":
-                        ops.append(FileOperation(
-                            type=OpType.WRITE_CREATE,  # Refined in Phase 2 from toolUseResult
+                        op = FileOperation(
+                            type=OpType.WRITE_CREATE,  # Refined from toolUseResult
                             file_path=file_path,
                             timestamp=timestamp,
                             session_id=session_id,
+                            content=inp.get("content"),  # Fallback content from input
                             tool_use_id=block.get("id"),
                             is_subagent=is_subagent,
                             line_number=line_num,
-                        ))
+                        )
+                        ops.append(op)
+                        if op.tool_use_id:
+                            pending_ops[op.tool_use_id] = op
                     elif name == "Edit":
-                        ops.append(FileOperation(
+                        op = FileOperation(
                             type=OpType.EDIT,
                             file_path=file_path,
                             timestamp=timestamp,
                             session_id=session_id,
+                            old_string=inp.get("old_string"),
+                            new_string=inp.get("new_string"),
+                            replace_all=inp.get("replace_all", False),
                             tool_use_id=block.get("id"),
                             is_subagent=is_subagent,
                             line_number=line_num,
-                        ))
+                        )
+                        ops.append(op)
+                        if op.tool_use_id:
+                            pending_ops[op.tool_use_id] = op
                     elif name == "Read":
-                        ops.append(FileOperation(
+                        op = FileOperation(
                             type=OpType.READ,
                             file_path=file_path,
                             timestamp=timestamp,
@@ -109,7 +181,33 @@ def scan_session(path: Path) -> list[FileOperation]:
                             tool_use_id=block.get("id"),
                             is_subagent=is_subagent,
                             line_number=line_num,
-                        ))
+                        )
+                        ops.append(op)
+                        if op.tool_use_id:
+                            pending_ops[op.tool_use_id] = op
+
+            elif entry_type == "user":
+                # Extract content from toolUseResult (top-level field)
+                tool_result = entry.get("toolUseResult")
+                if isinstance(tool_result, dict) and tool_result:
+                    _enrich_from_tool_use_result(tool_result, pending_ops)
+
+                # Extract Read content from message.content tool_result blocks
+                msg_content = entry.get("message", {}).get("content", [])
+                if isinstance(msg_content, list):
+                    for block in msg_content:
+                        if not isinstance(block, dict):
+                            continue
+                        if block.get("type") == "tool_result":
+                            tool_use_id = block.get("tool_use_id")
+                            if tool_use_id and tool_use_id in pending_ops:
+                                op = pending_ops[tool_use_id]
+                                if op.type == OpType.READ and op.content is None:
+                                    raw = block.get("content", "")
+                                    if isinstance(raw, str) and "\u2192" in raw:
+                                        op.content = strip_read_line_numbers(raw)
+                                    elif isinstance(raw, str):
+                                        op.content = raw
 
     return ops
 
