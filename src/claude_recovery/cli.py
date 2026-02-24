@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import fnmatch
 from datetime import datetime
 from pathlib import Path
 
@@ -8,6 +7,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from claude_recovery.core.filters import SearchMode, filter_files
 from claude_recovery.core.reconstructor import reconstruct_latest
 from claude_recovery.core.scanner import scan_all_sessions
 
@@ -50,7 +50,24 @@ def list_files(
     filter_pattern: str = typer.Option(
         "",
         "--filter", "-f",
-        help="Glob pattern to filter file paths (e.g., '*.ts', '**/router*')",
+        help="Pattern to filter file paths (e.g., '*.ts' for glob, 'router' for fuzzy, '\\.py$' for regex)",
+    ),
+    mode: SearchMode = typer.Option(
+        SearchMode.GLOB,
+        "--mode", "-m",
+        help="Filter mode: glob (default, e.g. '*.py'), regex (e.g. '\\.py$'), or fuzzy (e.g. 'routpy')",
+    ),
+    case_sensitive: bool = typer.Option(
+        False,
+        "--case-sensitive", "-s",
+        is_flag=True,
+        help="Force case-sensitive matching (default: smart-case)",
+    ),
+    ignore_case: bool = typer.Option(
+        False,
+        "--ignore-case", "-i",
+        is_flag=True,
+        help="Force case-insensitive matching (default: smart-case)",
     ),
     csv: bool = typer.Option(
         False,
@@ -62,11 +79,8 @@ def list_files(
     files = _scan_with_progress(claude_dir)
 
     # Apply filter
-    if filter_pattern:
-        files = {
-            p: f for p, f in files.items()
-            if fnmatch.fnmatch(p, filter_pattern) or fnmatch.fnmatch(Path(p).name, filter_pattern)
-        }
+    case_override = True if case_sensitive else (False if ignore_case else None)
+    files = filter_files(files, filter_pattern, mode, case_override)
 
     # Sort by path (filename + directory)
     sorted_files = sorted(files.values(), key=lambda f: f.path)
@@ -115,7 +129,24 @@ def extract_files(
     filter_pattern: str = typer.Option(
         "",
         "--filter", "-f",
-        help="Glob pattern to filter file paths",
+        help="Pattern to filter file paths (e.g., '*.ts' for glob, 'router' for fuzzy, '\\.py$' for regex)",
+    ),
+    mode: SearchMode = typer.Option(
+        SearchMode.GLOB,
+        "--mode", "-m",
+        help="Filter mode: glob (default, e.g. '*.py'), regex (e.g. '\\.py$'), or fuzzy (e.g. 'routpy')",
+    ),
+    case_sensitive: bool = typer.Option(
+        False,
+        "--case-sensitive", "-s",
+        is_flag=True,
+        help="Force case-sensitive matching (default: smart-case)",
+    ),
+    ignore_case: bool = typer.Option(
+        False,
+        "--ignore-case", "-i",
+        is_flag=True,
+        help="Force case-insensitive matching (default: smart-case)",
     ),
 ):
     """Extract recovered files to disk, preserving directory structure."""
@@ -125,11 +156,8 @@ def extract_files(
     files = _scan_with_progress(claude_dir)
 
     # Apply filter
-    if filter_pattern:
-        files = {
-            p: f for p, f in files.items()
-            if fnmatch.fnmatch(p, filter_pattern) or fnmatch.fnmatch(Path(p).name, filter_pattern)
-        }
+    case_override = True if case_sensitive else (False if ignore_case else None)
+    files = filter_files(files, filter_pattern, mode, case_override)
 
     if not files:
         console.print("[yellow]No files match the filter.[/yellow]")
