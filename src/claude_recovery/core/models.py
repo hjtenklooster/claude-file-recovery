@@ -1,0 +1,64 @@
+from __future__ import annotations
+
+import enum
+from dataclasses import dataclass, field
+
+
+class OpType(enum.Enum):
+    WRITE_CREATE = "write_create"
+    WRITE_UPDATE = "write_update"
+    EDIT = "edit"
+    READ = "read"
+    FILE_HISTORY = "file_history"
+
+
+@dataclass
+class FileOperation:
+    """A single file-mutating or file-reading operation extracted from JSONL."""
+
+    type: OpType
+    file_path: str  # Always absolute
+    timestamp: str  # ISO 8601 UTC
+    session_id: str
+    # Content fields — populated lazily or during reconstruction phase
+    content: str | None = None  # For write/read: full file content
+    original_file: str | None = None  # For edit: pre-edit content
+    old_string: str | None = None  # For edit: search string
+    new_string: str | None = None  # For edit: replacement string
+    replace_all: bool = False  # For edit
+    # Metadata
+    tool_use_id: str | None = None
+    is_subagent: bool = False
+    line_number: int = 0  # JSONL line number (for ordering within session)
+
+
+@dataclass
+class RecoverableFile:
+    """A file that can be recovered, with all its operations across sessions."""
+
+    path: str  # Absolute path
+    operations: list[FileOperation] = field(default_factory=list)
+
+    @property
+    def latest_timestamp(self) -> str:
+        """Most recent operation timestamp."""
+        return max(op.timestamp for op in self.operations) if self.operations else ""
+
+    @property
+    def operation_count(self) -> int:
+        return len(self.operations)
+
+    @property
+    def has_full_content(self) -> bool:
+        """Whether full file recovery is possible (has a Write or Read, not just Edits)."""
+        full_types = {OpType.WRITE_CREATE, OpType.WRITE_UPDATE, OpType.READ, OpType.FILE_HISTORY}
+        return any(op.type in full_types for op in self.operations)
+
+    @property
+    def op_type_summary(self) -> str:
+        """e.g., '3 writes, 5 edits, 2 reads'"""
+        counts: dict[str, int] = {}
+        for op in self.operations:
+            key = op.type.value.split("_")[0]  # write, edit, read, file
+            counts[key] = counts.get(key, 0) + 1
+        return ", ".join(f"{v} {k}{'s' if v != 1 else ''}" for k, v in sorted(counts.items()))

@@ -1,0 +1,21 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "claude-recovery"
+version = "0.1.0"
+description = "Recover files created and modified by Claude Code from session transcripts"
+requires-python = ">=3.10"
+dependencies = [
+    "textual>=8.0",
+    "typer>=0.9",
+    "rich>=13.0",
+    "orjson>=3.9",
+]
+
+[project.scripts]
+claude-recovery = "claude_recovery.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/claude_recovery"]
