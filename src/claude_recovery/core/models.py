@@ -26,6 +26,8 @@ class FileOperation:
     old_string: str | None = None  # For edit: search string
     new_string: str | None = None  # For edit: replacement string
     replace_all: bool = False  # For edit
+    read_offset: int | None = None  # For read: starting line number (1-indexed)
+    read_limit: int | None = None  # For read: number of lines to read
     # Metadata
     tool_use_id: str | None = None
     is_subagent: bool = False

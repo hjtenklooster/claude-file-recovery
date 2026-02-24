@@ -178,6 +178,8 @@ def scan_session(path: Path) -> list[FileOperation]:
                             file_path=file_path,
                             timestamp=timestamp,
                             session_id=session_id,
+                            read_offset=inp.get("offset"),
+                            read_limit=inp.get("limit"),
                             tool_use_id=block.get("id"),
                             is_subagent=is_subagent,
                             line_number=line_num,
