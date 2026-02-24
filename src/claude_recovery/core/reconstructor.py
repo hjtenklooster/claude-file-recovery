@@ -28,14 +28,17 @@ def reconstruct_file_at(operations: list[FileOperation], up_to_index: int) -> st
         if op.type in (OpType.WRITE_CREATE, OpType.WRITE_UPDATE):
             content = op.content
         elif op.type == OpType.READ:
-            if op.content is not None:
+            # Only use Read as fallback — partial reads (offset/limit) would
+            # clobber fully-reconstructed content from Write/Edit chains.
+            if content is None and op.content is not None:
                 content = op.content
         elif op.type == OpType.FILE_HISTORY:
             if op.content is not None:
                 content = op.content
         elif op.type == OpType.EDIT:
-            # If we have no base content yet, use originalFile from this edit
-            if content is None and op.original_file is not None:
+            # Prefer original_file (authoritative pre-edit state from toolUseResult)
+            # over current content, which may be stale or from a partial Read.
+            if op.original_file is not None:
                 content = op.original_file
             # Apply the edit
             if content is not None and op.old_string is not None and op.new_string is not None:
