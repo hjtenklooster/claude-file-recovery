@@ -8,9 +8,16 @@ from rich.console import Console
 from rich.table import Table
 
 from claude_recovery.core.filters import SearchMode, filter_files, filter_by_timestamp
-from claude_recovery.core.reconstructor import reconstruct_at_timestamp, reconstruct_latest
+from claude_recovery.core.reconstructor import (
+    reconstruct_at_timestamp,
+    reconstruct_latest,
+)
 from claude_recovery.core.scanner import scan_all_sessions
-from claude_recovery.core.timestamps import normalize_timestamp, format_local_confirmation, utc_to_local
+from claude_recovery.core.timestamps import (
+    normalize_timestamp,
+    format_local_confirmation,
+    utc_to_local,
+)
 
 app = typer.Typer(
     name="claude-recovery",
@@ -45,34 +52,40 @@ def _scan_with_progress(claude_dir: Path) -> dict:
 def list_files(
     claude_dir: Path = typer.Option(
         Path.home() / ".claude",
-        "--claude-dir", "-c",
+        "--claude-dir",
+        "-c",
         help="Path to Claude Code user config directory",
     ),
     filter_pattern: str = typer.Option(
         "",
-        "--filter", "-f",
+        "--filter",
+        "-f",
         help="Pattern to filter file paths (e.g., '*.ts' for glob, 'router' for fuzzy, '\\.py$' for regex)",
     ),
     mode: SearchMode = typer.Option(
         SearchMode.GLOB,
-        "--mode", "-m",
+        "--mode",
+        "-m",
         help="Filter mode: glob (default, e.g. '*.py'), regex (e.g. '\\.py$'), or fuzzy (e.g. 'routpy')",
     ),
     case_sensitive: bool = typer.Option(
         False,
-        "--case-sensitive", "-s",
+        "--case-sensitive",
+        "-s",
         is_flag=True,
         help="Force case-sensitive matching (default: smart-case)",
     ),
     ignore_case: bool = typer.Option(
         False,
-        "--ignore-case", "-i",
+        "--ignore-case",
+        "-i",
         is_flag=True,
         help="Force case-insensitive matching (default: smart-case)",
     ),
     before: str = typer.Option(
         "",
-        "--before", "-b",
+        "--before",
+        "-b",
         help="Only include operations at or before this timestamp (e.g. '2026-01-30', '2026-01-30 15:00')",
     ),
     csv: bool = typer.Option(
@@ -93,6 +106,7 @@ def list_files(
     # Detect injected content (warn only, no stripping — list-files doesn't output content)
     if not no_injection_detection:
         from claude_recovery.core.injection import detect_injected_content
+
         patterns = detect_injected_content(files)
         if patterns:
             total_ops = sum(p.affected_op_count for p in patterns)
@@ -115,7 +129,9 @@ def list_files(
         except ValueError as e:
             console.print(f"[red]Invalid --before timestamp: {e}[/red]")
             raise typer.Exit(code=1)
-        console.print(f"Filtering operations before {format_local_confirmation(before_ts)}")
+        console.print(
+            f"Filtering operations before {format_local_confirmation(before_ts)}"
+        )
         files = filter_by_timestamp(files, before_ts)
 
     # Sort by path (filename + directory)
@@ -128,7 +144,9 @@ def list_files(
         writer = csv_mod.writer(sys.stdout)
         writer.writerow(["last_modified", "ops", "full", "path"])
         for rf in sorted_files:
-            date_str = utc_to_local(rf.latest_timestamp) if rf.latest_timestamp else "unknown"
+            date_str = (
+                utc_to_local(rf.latest_timestamp) if rf.latest_timestamp else "unknown"
+            )
             full = "yes" if rf.has_full_content else "no"
             writer.writerow([date_str, rf.operation_count, full, rf.path])
         return
@@ -142,7 +160,9 @@ def list_files(
     table.add_column("Path", style="white")
 
     for rf in sorted_files:
-        date_str = utc_to_local(rf.latest_timestamp) if rf.latest_timestamp else "unknown"
+        date_str = (
+            utc_to_local(rf.latest_timestamp) if rf.latest_timestamp else "unknown"
+        )
         full = "[green]yes[/green]" if rf.has_full_content else "[red]no[/red]"
         table.add_row(date_str, str(rf.operation_count), full, rf.path)
 
@@ -154,12 +174,14 @@ def list_files(
 def extract_files(
     claude_dir: Path = typer.Option(
         Path.home() / ".claude",
-        "--claude-dir", "-c",
+        "--claude-dir",
+        "-c",
         help="Path to Claude Code user config directory",
     ),
     output_dir: Path = typer.Option(
         None,
-        "--output", "-o",
+        "--output",
+        "-o",
         help="Output directory for recovered files (default: recovered-{timestamp})",
     ),
     symlink_file: Path = typer.Option(
@@ -169,29 +191,34 @@ def extract_files(
     ),
     filter_pattern: str = typer.Option(
         "",
-        "--filter", "-f",
+        "--filter",
+        "-f",
         help="Pattern to filter file paths (e.g., '*.ts' for glob, 'router' for fuzzy, '\\.py$' for regex)",
     ),
     mode: SearchMode = typer.Option(
         SearchMode.GLOB,
-        "--mode", "-m",
+        "--mode",
+        "-m",
         help="Filter mode: glob (default, e.g. '*.py'), regex (e.g. '\\.py$'), or fuzzy (e.g. 'routpy')",
     ),
     case_sensitive: bool = typer.Option(
         False,
-        "--case-sensitive", "-s",
+        "--case-sensitive",
+        "-s",
         is_flag=True,
         help="Force case-sensitive matching (default: smart-case)",
     ),
     ignore_case: bool = typer.Option(
         False,
-        "--ignore-case", "-i",
+        "--ignore-case",
+        "-i",
         is_flag=True,
         help="Force case-insensitive matching (default: smart-case)",
     ),
     before: str = typer.Option(
         "",
-        "--before", "-b",
+        "--before",
+        "-b",
         help="Only include operations at or before this timestamp (e.g. '2026-01-30', '2026-01-30 15:00')",
     ),
     no_injection_detection: bool = typer.Option(
@@ -209,7 +236,11 @@ def extract_files(
 
     # Detect and strip injected content
     if not no_injection_detection:
-        from claude_recovery.core.injection import detect_injected_content, strip_injected_content
+        from claude_recovery.core.injection import (
+            detect_injected_content,
+            strip_injected_content,
+        )
+
         patterns = detect_injected_content(files)
         if patterns:
             total_ops = sum(p.affected_op_count for p in patterns)
@@ -223,9 +254,12 @@ def extract_files(
     # Apply symlink deduplication if YAML provided
     if symlink_file and symlink_file.exists():
         from claude_recovery.core.symlinks import load_symlink_yaml, merge_file_index
+
         groups = load_symlink_yaml(symlink_file)
         if groups:
-            console.print(f"Applying {len(groups)} symlink mappings for deduplication...")
+            console.print(
+                f"Applying {len(groups)} symlink mappings for deduplication..."
+            )
             files = merge_file_index(files, groups)
 
     # Apply filter
@@ -240,7 +274,9 @@ def extract_files(
         except ValueError as e:
             console.print(f"[red]Invalid --before timestamp: {e}[/red]")
             raise typer.Exit(code=1)
-        console.print(f"Filtering operations before {format_local_confirmation(before_ts)}")
+        console.print(
+            f"Filtering operations before {format_local_confirmation(before_ts)}"
+        )
         files = filter_by_timestamp(files, before_ts)
 
     if not files:
@@ -254,6 +290,7 @@ def extract_files(
     skipped = 0
 
     from rich.progress import Progress
+
     with Progress(console=console) as progress:
         task = progress.add_task("Extracting...", total=len(files))
 
@@ -291,12 +328,14 @@ def extract_files(
 def identify_symlinks(
     claude_dir: Path = typer.Option(
         Path.home() / ".claude",
-        "--claude-dir", "-c",
+        "--claude-dir",
+        "-c",
         help="Path to Claude Code user config directory",
     ),
     output: Path = typer.Option(
         Path("./symlinks.yaml"),
-        "--output", "-o",
+        "--output",
+        "-o",
         help="Output path for the YAML symlink mapping file",
     ),
     no_symlink_detection: bool = typer.Option(
@@ -355,12 +394,14 @@ def default(
     ctx: typer.Context,
     claude_dir: Path = typer.Option(
         Path.home() / ".claude",
-        "--claude-dir", "-c",
+        "--claude-dir",
+        "-c",
         help="Path to Claude Code user config directory",
     ),
     output_dir: Path = typer.Option(
         None,
-        "--output", "-o",
+        "--output",
+        "-o",
         help="Output directory for recovered files (default: recovered-{timestamp})",
     ),
     symlink_file: Path = typer.Option(
@@ -385,19 +426,27 @@ def default(
     if ctx.invoked_subcommand is None:
         if output_dir is None:
             output_dir = _default_output_dir()
-        _launch_tui_impl(claude_dir, output_dir, symlink_file, no_symlink_detection, no_injection_detection)
+        _launch_tui_impl(
+            claude_dir,
+            output_dir,
+            symlink_file,
+            no_symlink_detection,
+            no_injection_detection,
+        )
 
 
 @app.command("tui")
 def tui_command(
     claude_dir: Path = typer.Option(
         Path.home() / ".claude",
-        "--claude-dir", "-c",
+        "--claude-dir",
+        "-c",
         help="Path to Claude Code user config directory",
     ),
     output_dir: Path = typer.Option(
         None,
-        "--output", "-o",
+        "--output",
+        "-o",
         help="Output directory for recovered files (default: recovered-{timestamp})",
     ),
     symlink_file: Path = typer.Option(
@@ -421,7 +470,13 @@ def tui_command(
     """Launch the interactive TUI."""
     if output_dir is None:
         output_dir = _default_output_dir()
-    _launch_tui_impl(claude_dir, output_dir, symlink_file, no_symlink_detection, no_injection_detection)
+    _launch_tui_impl(
+        claude_dir,
+        output_dir,
+        symlink_file,
+        no_symlink_detection,
+        no_injection_detection,
+    )
 
 
 def _launch_tui_impl(
@@ -439,6 +494,7 @@ def _launch_tui_impl(
     injection_patterns = []
     if not no_injection_detection:
         from claude_recovery.core.injection import detect_injected_content
+
         injection_patterns = detect_injected_content(file_index)
         if injection_patterns:
             total_ops = sum(p.affected_op_count for p in injection_patterns)
@@ -467,6 +523,7 @@ def _launch_tui_impl(
             console.print(f"Detected {len(symlink_groups)} symlink groups")
 
     from claude_recovery.tui.app import FileRecoveryApp
+
     tui_app = FileRecoveryApp(
         claude_dir=claude_dir,
         output_dir=output_dir,
@@ -478,7 +535,9 @@ def _launch_tui_impl(
     tui_app.run()
 
     # Print resume command — detect how the CLI was invoked
-    import os, sys
+    import os
+    import sys
+
     parent_cmd = os.environ.get("_", "")
     if "uv" in parent_cmd:
         cmd = "uv run claude-recovery"
