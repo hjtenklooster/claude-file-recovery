@@ -5,6 +5,7 @@ claude-backup/
 output-*/
 recovered*/
 test-scripts/
+demo/demo-claude-data/
 
 # Python
 __pycache__/
