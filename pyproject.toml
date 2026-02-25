@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "claude-recovery"
-version = "0.1.0"
+version = "0.1.1"
 description = "Recover files created and modified by Claude Code from session transcripts"
 readme = "README.md"
 license = "MIT"

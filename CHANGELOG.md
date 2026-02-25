@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-02-25
+
+### Fixed
+- Demo GIF now renders on PyPI (use absolute URL instead of relative path)
+- Removed broken CONTRIBUTING.md link from README
+- Lint fixes across all source files
+
 ## [0.1.0] - 2026-02-25
 
 ### Added
@@ -29,5 +36,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - TUI injection review screen with confirm/skip before file browsing
 - `--no-injection-detection` flag to disable injected content filtering
 
-[Unreleased]: https://github.com/hjtenklooster/claude-recovery/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/hjtenklooster/claude-recovery/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/hjtenklooster/claude-recovery/releases/tag/v0.1.1
 [0.1.0]: https://github.com/hjtenklooster/claude-recovery/releases/tag/v0.1.0
