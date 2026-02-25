@@ -6,7 +6,27 @@ build-backend = "hatchling.build"
 name = "claude-recovery"
 version = "0.1.0"
 description = "Recover files created and modified by Claude Code from session transcripts"
+readme = "README.md"
+license = "MIT"
 requires-python = ">=3.10"
+authors = [
+    { name = "Rikkert ten Klooster" },
+]
+keywords = ["claude", "claude-code", "recovery", "cli", "tui", "jsonl"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development",
+    "Topic :: Utilities",
+]
 dependencies = [
     "textual>=8.0",
     "typer>=0.9",
@@ -14,6 +34,12 @@ dependencies = [
     "orjson>=3.9",
     "pyyaml>=6.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/hjtenklooster/claude-recovery"
+Repository = "https://github.com/hjtenklooster/claude-recovery"
+Issues = "https://github.com/hjtenklooster/claude-recovery/issues"
+Changelog = "https://github.com/hjtenklooster/claude-recovery/blob/main/CHANGELOG.md"
 
 [project.scripts]
 claude-recovery = "claude_recovery.cli:app"
