@@ -8,6 +8,7 @@ from pathlib import Path
 import orjson
 
 from claude_recovery.core.models import FileOperation, OpType, RecoverableFile
+from claude_recovery.core.reconstructor import apply_edit
 
 
 def discover_jsonl_files(backup_dir: Path) -> list[Path]:
@@ -59,6 +60,74 @@ def strip_read_line_numbers(text: str) -> str:
         else:
             stripped.append(line)
     return "\n".join(stripped)
+
+
+def _is_noop_edit(op: FileOperation) -> bool:
+    """Check if an Edit operation would produce no actual change (fast field-level check)."""
+    if op.type != OpType.EDIT:
+        return False
+    if op.is_error:
+        return False  # Keep errored ops — they'll be shown as errors in the TUI
+    if op.old_string is None or op.new_string is None:
+        return True
+    if not op.old_string:
+        return True
+    if op.old_string == op.new_string:
+        return True
+    if op.original_file is not None and op.old_string not in op.original_file:
+        return True
+    return False
+
+
+def _filter_noop_edits_by_replay(operations: list[FileOperation]) -> list[FileOperation]:
+    """Remove Edit operations that produce no actual change when replayed in sequence.
+
+    Catches cases that the field-level _is_noop_edit cannot detect, such as
+    duplicate/retried edits where original_file overrides produce identical
+    before/after states.
+    """
+    result: list[FileOperation] = []
+    content: str | None = None
+
+    for op in operations:
+        if op.type in (OpType.WRITE_CREATE, OpType.WRITE_UPDATE):
+            content = op.content
+            result.append(op)
+        elif op.type == OpType.READ:
+            if content is None and op.content is not None:
+                content = op.content
+            result.append(op)
+        elif op.type == OpType.FILE_HISTORY:
+            if op.content is not None:
+                content = op.content
+            result.append(op)
+        elif op.type == OpType.EDIT:
+            if op.is_error:
+                # Keep errored ops — they didn't modify content
+                result.append(op)
+                continue
+            if op.original_file is not None:
+                # Edit has authoritative pre-edit state from disk.
+                # Check if the edit changes the actual file, not our chain.
+                after_edit = op.original_file
+                if op.old_string is not None and op.new_string is not None:
+                    after_edit = apply_edit(op.original_file, op.old_string, op.new_string, op.replace_all)
+                content = after_edit
+                if after_edit != op.original_file:
+                    result.append(op)
+                # else: edit didn't change the actual file — drop it
+            else:
+                # No original_file — check if edit changes reconstructed content
+                before = content
+                if content is not None and op.old_string is not None and op.new_string is not None:
+                    content = apply_edit(content, op.old_string, op.new_string, op.replace_all)
+                if content != before:
+                    result.append(op)
+                # else: edit produced no change in reconstructed state — drop it
+        else:
+            result.append(op)
+
+    return result
 
 
 def _enrich_from_tool_use_result(result: dict, pending_ops: dict[str, FileOperation]) -> None:
@@ -194,7 +263,23 @@ def scan_session(path: Path) -> list[FileOperation]:
                 if isinstance(tool_result, dict) and tool_result:
                     _enrich_from_tool_use_result(tool_result, pending_ops)
 
-                # Extract Read content from message.content tool_result blocks
+                # Also detect errors from top-level toolUseResult string
+                if isinstance(tool_result, str) and tool_result.startswith("Error: "):
+                    # Match to most recent pending op by sourceToolAssistantUUID
+                    source_uuid = entry.get("sourceToolAssistantUUID")
+                    tool_use_id_from_content = None
+                    msg_content_err = entry.get("message", {}).get("content", [])
+                    if isinstance(msg_content_err, list):
+                        for b in msg_content_err:
+                            if isinstance(b, dict) and b.get("type") == "tool_result":
+                                tool_use_id_from_content = b.get("tool_use_id")
+                                break
+                    if tool_use_id_from_content and tool_use_id_from_content in pending_ops:
+                        err_op = pending_ops[tool_use_id_from_content]
+                        err_op.is_error = True
+                        err_op.error_message = tool_result[len("Error: "):]
+
+                # Extract content and detect errors from message.content tool_result blocks
                 msg_content = entry.get("message", {}).get("content", [])
                 if isinstance(msg_content, list):
                     for block in msg_content:
@@ -204,14 +289,20 @@ def scan_session(path: Path) -> list[FileOperation]:
                             tool_use_id = block.get("tool_use_id")
                             if tool_use_id and tool_use_id in pending_ops:
                                 op = pending_ops[tool_use_id]
-                                if op.type == OpType.READ and op.content is None:
+                                if block.get("is_error"):
+                                    op.is_error = True
+                                    raw = block.get("content", "")
+                                    if isinstance(raw, str):
+                                        m = re.match(r"<tool_use_error>(.*)</tool_use_error>", raw, re.DOTALL)
+                                        op.error_message = m.group(1).strip() if m else raw.strip()
+                                elif op.type == OpType.READ and op.content is None:
                                     raw = block.get("content", "")
                                     if isinstance(raw, str) and "\u2192" in raw:
                                         op.content = strip_read_line_numbers(raw)
                                     elif isinstance(raw, str):
                                         op.content = raw
 
-    return ops
+    return [op for op in ops if not _is_noop_edit(op)]
 
 
 def scan_all_sessions(
@@ -251,5 +342,6 @@ def scan_all_sessions(
     # Sort operations: within same session by line_number, across sessions by timestamp
     for rf in files.values():
         rf.operations.sort(key=lambda o: (o.timestamp, o.session_id, o.line_number))
+        rf.operations = _filter_noop_edits_by_replay(rf.operations)
 
     return files

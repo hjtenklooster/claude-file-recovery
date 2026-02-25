@@ -10,6 +10,7 @@ from rich.table import Table
 from claude_recovery.core.filters import SearchMode, filter_files, filter_by_timestamp
 from claude_recovery.core.reconstructor import reconstruct_at_timestamp, reconstruct_latest
 from claude_recovery.core.scanner import scan_all_sessions
+from claude_recovery.core.timestamps import normalize_timestamp, format_local_confirmation, utc_to_local
 
 app = typer.Typer(
     name="claude-recovery",
@@ -90,7 +91,6 @@ def list_files(
     # Apply timestamp filter
     before_ts = ""
     if before:
-        from claude_recovery.core.timestamps import normalize_timestamp, format_local_confirmation
         try:
             before_ts = normalize_timestamp(before)
         except ValueError as e:
@@ -109,21 +109,21 @@ def list_files(
         writer = csv_mod.writer(sys.stdout)
         writer.writerow(["last_modified", "ops", "full", "path"])
         for rf in sorted_files:
-            ts = rf.latest_timestamp
-            date_str = ts[:16].replace("T", " ") if ts else "unknown"
+            date_str = utc_to_local(rf.latest_timestamp) if rf.latest_timestamp else "unknown"
             full = "yes" if rf.has_full_content else "no"
             writer.writerow([date_str, rf.operation_count, full, rf.path])
         return
 
-    table = Table(title=f"Recoverable Files ({len(sorted_files)} files)")
+    before_label = f", before {utc_to_local(before_ts)}" if before_ts else ""
+    table = Table(title=f"Recoverable Files ({len(sorted_files)} files{before_label})")
     table.add_column("Last Modified", style="cyan", no_wrap=True)
-    table.add_column("Ops", justify="right", style="green")
+    ops_header = "Ops (before cutoff)" if before_ts else "Ops"
+    table.add_column(ops_header, justify="right", style="green")
     table.add_column("Full", justify="center", style="bold")
     table.add_column("Path", style="white")
 
     for rf in sorted_files:
-        ts = rf.latest_timestamp
-        date_str = ts[:16].replace("T", " ") if ts else "unknown"
+        date_str = utc_to_local(rf.latest_timestamp) if rf.latest_timestamp else "unknown"
         full = "[green]yes[/green]" if rf.has_full_content else "[red]no[/red]"
         table.add_row(date_str, str(rf.operation_count), full, rf.path)
 
@@ -197,7 +197,6 @@ def extract_files(
     # Apply timestamp filter
     before_ts = ""
     if before:
-        from claude_recovery.core.timestamps import normalize_timestamp, format_local_confirmation
         try:
             before_ts = normalize_timestamp(before)
         except ValueError as e:
@@ -246,6 +245,8 @@ def extract_files(
         f"[bold yellow]{skipped}[/bold yellow] skipped (no content), "
         f"[bold red]{failed}[/bold red] failed."
     )
+    if success:
+        console.print(f"Output directory: [bold]{output_dir.resolve()}[/bold]")
 
 
 @app.command("identify-symlinks")

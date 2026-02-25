@@ -57,18 +57,27 @@ def normalize_timestamp(user_input: str) -> str:
     )
 
 
+def utc_to_local(utc_ts: str, fmt: str = "%Y-%m-%d %H:%M") -> str:
+    """Convert a UTC ISO 8601 timestamp to a local-time string.
+
+    Returns the formatted local time, or the raw input on parse failure.
+    """
+    try:
+        dt_utc = datetime.fromisoformat(utc_ts.replace("Z", "+00:00"))
+        return dt_utc.astimezone().strftime(fmt)
+    except Exception:
+        return utc_ts
+
+
 def format_local_confirmation(utc_ts: str) -> str:
     """Format a UTC timestamp as a local-time confirmation string.
 
     Example: "2026-01-30T14:00:00.000Z (2026-01-30 15:00 local)"
     """
-    try:
-        dt_utc = datetime.fromisoformat(utc_ts.replace("Z", "+00:00"))
-        dt_local = dt_utc.astimezone()
-        local_str = dt_local.strftime("%Y-%m-%d %H:%M")
-        return f"{utc_ts} ({local_str} local)"
-    except Exception:
+    local_str = utc_to_local(utc_ts)
+    if local_str == utc_ts:
         return utc_ts
+    return f"{utc_ts} ({local_str} local)"
 
 
 def _parse_aware(s: str) -> str:

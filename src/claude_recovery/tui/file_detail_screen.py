@@ -10,6 +10,7 @@ from textual.widgets.option_list import Option
 from claude_recovery.core.models import OpType, RecoverableFile
 from claude_recovery.core.reconstructor import reconstruct_file_at
 from claude_recovery.core.diff import compute_before_after, format_diff_text, format_full_diff_text, format_read_range_view
+from claude_recovery.core.timestamps import utc_to_local
 
 
 class FileDetailScreen(Screen):
@@ -84,9 +85,9 @@ class FileDetailScreen(Screen):
         )
         snapshot_list = self.query_one("#snapshot_list", OptionList)
         for op in self._display_ops:
-            ts = op.timestamp[:16].replace("T", " ") if op.timestamp else "unknown"
+            ts = utc_to_local(op.timestamp) if op.timestamp else "unknown"
             op_label = op.type.value.replace("_", " ").title()
-            label = f"{ts}  {op_label}"
+            label = f"{ts}  {op_label}  ✗" if op.is_error else f"{ts}  {op_label}"
             snapshot_list.add_option(Option(label))
         if self._display_ops:
             snapshot_list.highlighted = 0
@@ -162,6 +163,16 @@ class FileDetailScreen(Screen):
                 result.append(content)
                 return result
             return provenance + content
+
+        if op.is_error:
+            op_label = op.type.value.replace("_", " ").title()
+            self.query_one("#view_hint", Static).update(
+                f" {op_label}: Tool call failed"
+            )
+            preview.update(
+                _with_provenance(f"[Error] {op.error_message or 'Tool call failed'}")
+            )
+            return
 
         if self._view_mode in ("diff", "full-diff"):
             if is_read_op:

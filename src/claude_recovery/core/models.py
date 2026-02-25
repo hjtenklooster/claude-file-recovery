@@ -28,6 +28,9 @@ class FileOperation:
     replace_all: bool = False  # For edit
     read_offset: int | None = None  # For read: starting line number (1-indexed)
     read_limit: int | None = None  # For read: number of lines to read
+    # Error state — set when tool_result has is_error: true
+    is_error: bool = False
+    error_message: str | None = None
     # Metadata
     tool_use_id: str | None = None
     is_subagent: bool = False

@@ -32,13 +32,8 @@ def compute_before_after(
     op = operations[index]
 
     if op.type == OpType.EDIT and op.original_file is not None:
-        prev_op = operations[index - 1]
-        if prev_op.type == OpType.EDIT:
-            # Consecutive edits: use reconstructed chain for accurate incremental diff
-            before = reconstruct_file_at(operations, index - 1)
-        else:
-            # Non-consecutive edit: original_file is authoritative
-            before = op.original_file
+        # original_file is the authoritative pre-edit state from disk
+        before = op.original_file
     else:
         before = reconstruct_file_at(operations, index - 1)
 

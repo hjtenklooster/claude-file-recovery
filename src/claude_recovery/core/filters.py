@@ -8,6 +8,8 @@ import re
 
 from textual.fuzzy import Matcher
 
+from claude_recovery.core.models import RecoverableFile
+
 
 class SearchMode(str, enum.Enum):
     """Available search/filter modes."""
@@ -110,19 +112,21 @@ def filter_files(
 
 
 def filter_by_timestamp(
-    files: dict[str, object],
+    files: dict[str, RecoverableFile],
     before_ts: str,
-) -> dict[str, object]:
-    """Exclude files where ALL operations are after the cutoff timestamp.
+) -> dict[str, RecoverableFile]:
+    """Return files with only operations at or before the cutoff timestamp.
 
-    Returns a new dict containing only files that have at least one
-    operation with timestamp <= before_ts. Short-circuits on empty before_ts.
+    Each returned RecoverableFile has its operations trimmed to only those
+    with timestamp <= before_ts. Files with no qualifying operations are
+    excluded. Short-circuits on empty before_ts.
     """
     if not before_ts:
         return files
 
-    return {
-        path: rf
-        for path, rf in files.items()
-        if any(op.timestamp <= before_ts for op in rf.operations)
-    }
+    result = {}
+    for path, rf in files.items():
+        trimmed_ops = [op for op in rf.operations if op.timestamp <= before_ts]
+        if trimmed_ops:
+            result[path] = RecoverableFile(path, trimmed_ops)
+    return result

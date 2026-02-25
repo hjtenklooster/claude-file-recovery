@@ -13,6 +13,7 @@ from textual.widgets import Footer, Input, Label, SelectionList, Static
 from textual.widgets.selection_list import Selection
 
 from claude_recovery.core.filters import SearchMode, match_path, validate_regex, smart_case_sensitive
+from claude_recovery.core.timestamps import utc_to_local
 from claude_recovery.core.models import RecoverableFile
 from claude_recovery.core.reconstructor import reconstruct_latest
 
@@ -102,8 +103,7 @@ class FileListScreen(Screen):
         app = self.app  # type: FileRecoveryApp
         self._all_files = sorted(
             app.file_index.values(),
-            key=lambda f: f.latest_timestamp,
-            reverse=True,
+            key=lambda f: f.path,
         )
         self._repopulate_list()
         self.query_one("#filter", Input).focus()
@@ -153,7 +153,7 @@ class FileListScreen(Screen):
             items = self._all_files
 
         for rf in items:
-            ts = rf.latest_timestamp[:10] if rf.latest_timestamp else "unknown"
+            ts = utc_to_local(rf.latest_timestamp, "%Y-%m-%d") if rf.latest_timestamp else "unknown"
             label = f"{ts}  {rf.path}  ({rf.operation_count} ops)"
             is_selected = rf.path in app.selected_paths
             file_list.add_option(Selection(label, rf.path, is_selected))
@@ -345,8 +345,7 @@ class FileListScreen(Screen):
         app = self.app  # type: FileRecoveryApp
         self._all_files = sorted(
             app.file_index.values(),
-            key=lambda f: f.latest_timestamp,
-            reverse=True,
+            key=lambda f: f.path,
         )
         self._repopulate_list()
 
