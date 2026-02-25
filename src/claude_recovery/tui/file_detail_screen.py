@@ -7,9 +7,16 @@ from textual.screen import Screen
 from textual.widgets import Footer, OptionList, Static
 from textual.widgets.option_list import Option
 
-from claude_recovery.core.models import OpType, RecoverableFile
+from pathlib import Path
+
+from claude_recovery.core.models import FileOperation, OpType, RecoverableFile
 from claude_recovery.core.reconstructor import reconstruct_file_at
-from claude_recovery.core.diff import compute_before_after, format_diff_text, format_full_diff_text, format_read_range_view
+from claude_recovery.core.diff import (
+    compute_before_after,
+    format_diff_text,
+    format_full_diff_text,
+    format_read_range_view,
+)
 from claude_recovery.core.timestamps import utc_to_local
 
 
@@ -37,15 +44,28 @@ class FileDetailScreen(Screen):
         self._VIEW_MODES = ("diff", "full-diff", "content")
         self._current_display_index: int = 0
 
-    _MODE_LABELS = {"content": "Recovered File", "diff": "Diff", "full-diff": "Full Diff"}
-    _TAB_ID_TO_MODE = {"tab_diff": "diff", "tab_full_diff": "full-diff", "tab_content": "content"}
+    _MODE_LABELS = {
+        "content": "Recovered File",
+        "diff": "Diff",
+        "full-diff": "Full Diff",
+    }
+    _TAB_ID_TO_MODE = {
+        "tab_diff": "diff",
+        "tab_full_diff": "full-diff",
+        "tab_content": "content",
+    }
 
     def _render_tabs(self) -> list[Static]:
         """Build tab widgets for each view mode."""
         tabs = []
         for mode in self._VIEW_MODES:
             label = self._MODE_LABELS[mode]
-            tab = Static(f" {label} ", classes="view-tab view-tab--active" if mode == self._view_mode else "view-tab")
+            tab = Static(
+                f" {label} ",
+                classes="view-tab view-tab--active"
+                if mode == self._view_mode
+                else "view-tab",
+            )
             tab.id = f"tab_{mode.replace('-', '_')}"
             tabs.append(tab)
         return tabs
@@ -93,12 +113,16 @@ class FileDetailScreen(Screen):
             snapshot_list.highlighted = 0
             self._update_preview(0)
 
-    def on_option_list_option_highlighted(self, event: OptionList.OptionHighlighted) -> None:
+    def on_option_list_option_highlighted(
+        self, event: OptionList.OptionHighlighted
+    ) -> None:
         """Update file preview when a different snapshot is highlighted."""
         if event.option_index is not None:
             self._update_preview(event.option_index)
 
-    def _get_view_hint(self, op: "FileOperation", is_read_op: bool, is_partial_read: bool) -> str:
+    def _get_view_hint(
+        self, op: "FileOperation", is_read_op: bool, is_partial_read: bool
+    ) -> str:
         """Return a one-line description of what the current view is showing."""
         op_label = op.type.value.replace("_", " ").title()
         if self._view_mode == "diff":
@@ -136,10 +160,7 @@ class FileDetailScreen(Screen):
         # Character-level wrapping is handled by CSS: text-wrap: nowrap + text-overflow: fold
         provenance = ""
         if op.source_path:
-            provenance = (
-                f"source:    {op.source_path}\n"
-                f"canonical: {self.file.path}\n\n"
-            )
+            provenance = f"source:    {op.source_path}\ncanonical: {self.file.path}\n\n"
         elif any(o.source_path for o in self.file.operations):
             # This file has merged ops but this particular op is from the canonical path
             provenance = f"source:    {self.file.path}\n\n"
@@ -158,6 +179,7 @@ class FileDetailScreen(Screen):
             if not provenance:
                 return content
             from rich.text import Text as RichText
+
             if isinstance(content, RichText):
                 result = RichText(provenance)
                 result.append(content)
@@ -179,7 +201,9 @@ class FileDetailScreen(Screen):
                 content = reconstruct_file_at(self.file.operations, ops_index)
                 if content is not None:
                     text = format_read_range_view(
-                        content, op.read_offset, op.read_limit,
+                        content,
+                        op.read_offset,
+                        op.read_limit,
                         full=(self._view_mode == "full-diff"),
                     )
                     preview.update(_with_provenance(text))
@@ -200,7 +224,10 @@ class FileDetailScreen(Screen):
             if content is not None:
                 lines = content.split("\n")
                 if len(lines) > 500:
-                    display = "\n".join(lines[:500]) + f"\n\n... ({len(lines) - 500} more lines)"
+                    display = (
+                        "\n".join(lines[:500])
+                        + f"\n\n... ({len(lines) - 500} more lines)"
+                    )
                 else:
                     display = content
                 preview.update(_with_provenance(display))
@@ -257,6 +284,7 @@ class FileDetailScreen(Screen):
     def action_change_output(self) -> None:
         """Open modal to change the output directory."""
         from claude_recovery.tui.output_dir_modal import OutputDirModal
+
         self.app.push_screen(
             OutputDirModal(self.app.output_dir),
             callback=self._handle_output_dir_result,

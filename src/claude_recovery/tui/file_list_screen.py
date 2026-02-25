@@ -12,7 +12,12 @@ from textual.timer import Timer
 from textual.widgets import Footer, Input, Label, SelectionList, Static
 from textual.widgets.selection_list import Selection
 
-from claude_recovery.core.filters import SearchMode, match_path, validate_regex, smart_case_sensitive
+from claude_recovery.core.filters import (
+    SearchMode,
+    match_path,
+    validate_regex,
+    smart_case_sensitive,
+)
 from claude_recovery.core.timestamps import utc_to_local
 from claude_recovery.core.models import RecoverableFile
 from claude_recovery.core.reconstructor import reconstruct_latest
@@ -130,13 +135,17 @@ class FileListScreen(Screen):
                 else:
                     mode_label.remove_class("error")
                     items = [
-                        rf for rf in self._all_files
-                        if match_path(rf.path, self._search_query, mode, case_sensitive) > 0
+                        rf
+                        for rf in self._all_files
+                        if match_path(rf.path, self._search_query, mode, case_sensitive)
+                        > 0
                     ]
             elif mode is SearchMode.FUZZY:
                 scored = []
                 for rf in self._all_files:
-                    score = match_path(rf.path, self._search_query, mode, case_sensitive)
+                    score = match_path(
+                        rf.path, self._search_query, mode, case_sensitive
+                    )
                     if score > 0:
                         scored.append((score, rf))
                 scored.sort(key=lambda x: x[0], reverse=True)
@@ -144,7 +153,8 @@ class FileListScreen(Screen):
             else:
                 # GLOB mode — binary match, keep original order
                 items = [
-                    rf for rf in self._all_files
+                    rf
+                    for rf in self._all_files
                     if match_path(rf.path, self._search_query, mode, case_sensitive) > 0
                 ]
         else:
@@ -153,7 +163,11 @@ class FileListScreen(Screen):
             items = self._all_files
 
         for rf in items:
-            ts = utc_to_local(rf.latest_timestamp, "%Y-%m-%d") if rf.latest_timestamp else "unknown"
+            ts = (
+                utc_to_local(rf.latest_timestamp, "%Y-%m-%d")
+                if rf.latest_timestamp
+                else "unknown"
+            )
             label = f"{ts}  {rf.path}  ({rf.operation_count} ops)"
             is_selected = rf.path in app.selected_paths
             file_list.add_option(Selection(label, rf.path, is_selected))
@@ -170,11 +184,9 @@ class FileListScreen(Screen):
         if app.symlinks_enabled and app.merged_file_index:
             groups = len([g for g in app.symlink_groups if g.aliases])
             symlink_text = f"symlink detection: enabled ({groups} groups) "
-            key_text = "S"
             action_text = " to disable"
         else:
             symlink_text = "symlink detection: disabled "
-            key_text = "S"
             action_text = " to enable"
         self.query_one("#output_dir", Static).update(
             f" Output directory: {app.output_dir}"
@@ -198,9 +210,7 @@ class FileListScreen(Screen):
         self.query_one("#file_list").add_class("stale")
         if self._debounce_timer:
             self._debounce_timer.stop()
-        self._debounce_timer = self.set_timer(
-            self.DEBOUNCE_DELAY, self._apply_filter
-        )
+        self._debounce_timer = self.set_timer(self.DEBOUNCE_DELAY, self._apply_filter)
 
     def _apply_filter(self) -> None:
         """Called after debounce delay — run the actual filter."""
@@ -302,6 +312,7 @@ class FileListScreen(Screen):
         rf = self.app.file_index.get(path)
         if rf:
             from claude_recovery.tui.file_detail_screen import FileDetailScreen
+
             self.app.push_screen(FileDetailScreen(rf))
 
     def action_toggle_symlinks(self) -> None:
@@ -341,11 +352,13 @@ class FileListScreen(Screen):
         groups = detect_fs_symlinks(file_paths)
         app.symlink_groups = groups or []
         from claude_recovery.tui.symlink_review_screen import SymlinkReviewScreen
+
         self.app.push_screen(SymlinkReviewScreen())
 
     def action_open_symlinks(self) -> None:
         """Open the symlink review screen."""
         from claude_recovery.tui.symlink_review_screen import SymlinkReviewScreen
+
         self.app.push_screen(SymlinkReviewScreen())
 
     def on_screen_resume(self) -> None:
@@ -360,6 +373,7 @@ class FileListScreen(Screen):
     def action_change_output(self) -> None:
         """Open modal to change the output directory."""
         from claude_recovery.tui.output_dir_modal import OutputDirModal
+
         self.app.push_screen(
             OutputDirModal(self.app.output_dir),
             callback=self._handle_output_dir_result,

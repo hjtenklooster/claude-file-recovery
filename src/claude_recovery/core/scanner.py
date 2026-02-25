@@ -82,7 +82,9 @@ def _is_noop_edit(op: FileOperation) -> bool:
     return False
 
 
-def _filter_noop_edits_by_replay(operations: list[FileOperation]) -> list[FileOperation]:
+def _filter_noop_edits_by_replay(
+    operations: list[FileOperation],
+) -> list[FileOperation]:
     """Remove Edit operations that produce no actual change when replayed in sequence.
 
     Catches cases that the field-level _is_noop_edit cannot detect, such as
@@ -100,7 +102,10 @@ def _filter_noop_edits_by_replay(operations: list[FileOperation]) -> list[FileOp
             if op.content is not None:
                 # Mirror reconstructor's is_full logic exactly, including request-param fallback
                 if op.read_start_line is not None:
-                    is_full = op.read_start_line == 1 and op.read_num_lines == op.read_total_lines
+                    is_full = (
+                        op.read_start_line == 1
+                        and op.read_num_lines == op.read_total_lines
+                    )
                 else:
                     is_full = op.read_offset is None and op.read_limit is None
                 if is_full:
@@ -109,13 +114,19 @@ def _filter_noop_edits_by_replay(operations: list[FileOperation]) -> list[FileOp
                     start_line = op.read_start_line or op.read_offset
                     if content is None:
                         content = splice_read(
-                            None, op.content, start_line,
-                            op.read_num_lines, op.read_total_lines,
+                            None,
+                            op.content,
+                            start_line,
+                            op.read_num_lines,
+                            op.read_total_lines,
                         )
                     else:
                         content = splice_read(
-                            content, op.content, start_line,
-                            op.read_num_lines, op.read_total_lines,
+                            content,
+                            op.content,
+                            start_line,
+                            op.read_num_lines,
+                            op.read_total_lines,
                         )
             result.append(op)
         elif op.type == OpType.FILE_HISTORY:
@@ -132,7 +143,9 @@ def _filter_noop_edits_by_replay(operations: list[FileOperation]) -> list[FileOp
                 # Check if the edit changes the actual file, not our chain.
                 after_edit = op.original_file
                 if op.old_string is not None and op.new_string is not None:
-                    after_edit = apply_edit(op.original_file, op.old_string, op.new_string, op.replace_all)
+                    after_edit = apply_edit(
+                        op.original_file, op.old_string, op.new_string, op.replace_all
+                    )
                 content = after_edit
                 if after_edit != op.original_file:
                     result.append(op)
@@ -140,8 +153,14 @@ def _filter_noop_edits_by_replay(operations: list[FileOperation]) -> list[FileOp
             else:
                 # No original_file — check if edit changes reconstructed content
                 before = content
-                if content is not None and op.old_string is not None and op.new_string is not None:
-                    content = apply_edit(content, op.old_string, op.new_string, op.replace_all)
+                if (
+                    content is not None
+                    and op.old_string is not None
+                    and op.new_string is not None
+                ):
+                    content = apply_edit(
+                        content, op.old_string, op.new_string, op.replace_all
+                    )
                 if content != before:
                     result.append(op)
                 # else: edit produced no change in reconstructed state — drop it
@@ -151,7 +170,9 @@ def _filter_noop_edits_by_replay(operations: list[FileOperation]) -> list[FileOp
     return result
 
 
-def _enrich_from_tool_use_result(result: dict, pending_ops: dict[str, FileOperation]) -> None:
+def _enrich_from_tool_use_result(
+    result: dict, pending_ops: dict[str, FileOperation]
+) -> None:
     """Enrich a pending FileOperation with data from toolUseResult.
 
     Write toolUseResult has: type, filePath, content, structuredPatch, originalFile
@@ -322,8 +343,7 @@ def scan_session(path: Path, backup_dir: Path | None = None) -> list[FileOperati
 
                 # Also detect errors from top-level toolUseResult string
                 if isinstance(tool_result, str) and tool_result.startswith("Error: "):
-                    # Match to most recent pending op by sourceToolAssistantUUID
-                    source_uuid = entry.get("sourceToolAssistantUUID")
+                    # Match to most recent pending op by tool_use_id in content
                     tool_use_id_from_content = None
                     msg_content_err = entry.get("message", {}).get("content", [])
                     if isinstance(msg_content_err, list):
@@ -331,10 +351,13 @@ def scan_session(path: Path, backup_dir: Path | None = None) -> list[FileOperati
                             if isinstance(b, dict) and b.get("type") == "tool_result":
                                 tool_use_id_from_content = b.get("tool_use_id")
                                 break
-                    if tool_use_id_from_content and tool_use_id_from_content in pending_ops:
+                    if (
+                        tool_use_id_from_content
+                        and tool_use_id_from_content in pending_ops
+                    ):
                         err_op = pending_ops[tool_use_id_from_content]
                         err_op.is_error = True
-                        err_op.error_message = tool_result[len("Error: "):]
+                        err_op.error_message = tool_result[len("Error: ") :]
 
                 # Extract content and detect errors from message.content tool_result blocks
                 msg_content = entry.get("message", {}).get("content", [])
@@ -366,8 +389,14 @@ def scan_session(path: Path, backup_dir: Path | None = None) -> list[FileOperati
                                     op.is_error = True
                                     raw = block.get("content", "")
                                     if isinstance(raw, str):
-                                        m = re.match(r"<tool_use_error>(.*)</tool_use_error>", raw, re.DOTALL)
-                                        op.error_message = m.group(1).strip() if m else raw.strip()
+                                        m = re.match(
+                                            r"<tool_use_error>(.*)</tool_use_error>",
+                                            raw,
+                                            re.DOTALL,
+                                        )
+                                        op.error_message = (
+                                            m.group(1).strip() if m else raw.strip()
+                                        )
                                 elif op.type == OpType.READ and op.content is None:
                                     raw = block.get("content", "")
                                     if isinstance(raw, str) and "\u2192" in raw:
@@ -391,9 +420,13 @@ def scan_session(path: Path, backup_dir: Path | None = None) -> list[FileOperati
                         abs_path = rel_path
 
                     # Read the snapshot file from disk
-                    snapshot_file = backup_dir / "file-history" / session_id / backup_filename
+                    snapshot_file = (
+                        backup_dir / "file-history" / session_id / backup_filename
+                    )
                     try:
-                        file_content = snapshot_file.read_text(encoding="utf-8", errors="replace")
+                        file_content = snapshot_file.read_text(
+                            encoding="utf-8", errors="replace"
+                        )
                     except (OSError, IOError):
                         continue  # Skip if file doesn't exist or can't be read
 

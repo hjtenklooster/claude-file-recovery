@@ -1,0 +1,17 @@
+#!/bin/sh
+# Auto-fix lint issues before committing
+# Set up with: git config core.hooksPath .githooks
+
+# Get staged Python files
+STAGED=$(git diff --cached --name-only --diff-filter=ACM -- '*.py')
+
+if [ -z "$STAGED" ]; then
+    exit 0
+fi
+
+# Auto-fix with ruff
+uvx ruff check --fix $STAGED
+uvx ruff format $STAGED
+
+# Re-stage the fixed files
+git add $STAGED

@@ -8,7 +8,7 @@ from textual.widgets.option_list import Option
 
 from pathlib import Path
 
-from claude_recovery.core.symlinks.models import SymlinkGroup, save_symlink_yaml
+from claude_recovery.core.symlinks.models import save_symlink_yaml
 from claude_recovery.core.symlinks.merge import merge_file_index
 
 
@@ -118,7 +118,9 @@ class SymlinkReviewScreen(Screen):
 
         entry_type, group_idx, alias_idx = self._entries[idx]
         if entry_type != "alias":
-            self.notify("Can only delete alias entries (indented lines)", severity="warning")
+            self.notify(
+                "Can only delete alias entries (indented lines)", severity="warning"
+            )
             return
 
         app = self.app  # type: FileRecoveryApp
@@ -147,7 +149,9 @@ class SymlinkReviewScreen(Screen):
             "#   - /Users/you/worktrees/feature/src/project\n"
             "#   - /tmp/project\n"
             "#\n"
-            "# Reuse with: claude-recovery --symlink-file {path}\n".format(path=yaml_path)
+            "# Reuse with: claude-recovery --symlink-file {path}\n".format(
+                path=yaml_path
+            )
         )
 
         yaml_path.parent.mkdir(parents=True, exist_ok=True)
@@ -165,10 +169,12 @@ class SymlinkReviewScreen(Screen):
         screen_stack = self.app.screen_stack
         if len(screen_stack) >= 2:
             from claude_recovery.tui.file_list_screen import FileListScreen
+
             if isinstance(screen_stack[-2], FileListScreen):
                 self.app.pop_screen()
                 return
         from claude_recovery.tui.file_list_screen import FileListScreen
+
         self.app.push_screen(FileListScreen())
 
     def action_confirm(self) -> None:
@@ -198,10 +204,12 @@ class SymlinkReviewScreen(Screen):
         screen_stack = self.app.screen_stack
         if len(screen_stack) >= 2:
             from claude_recovery.tui.file_list_screen import FileListScreen
+
             if isinstance(screen_stack[-2], FileListScreen):
                 self.app.pop_screen()
                 return
         from claude_recovery.tui.file_list_screen import FileListScreen
+
         self.app.push_screen(FileListScreen())
 
     def action_show_help(self) -> None:
