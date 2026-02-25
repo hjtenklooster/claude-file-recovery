@@ -24,8 +24,28 @@
     width: 1fr;
 }
 
+#file_explanation {
+    height: auto;
+    max-height: 8;
+    background: #1a2a3a;
+    color: #8abbd4;
+    padding: 1 0;
+}
+
 #file_list {
     height: 1fr;
+}
+
+#file_list.stale {
+    opacity: 0.5;
+}
+
+#view_hint {
+    height: 1;
+    background: $surface;
+    color: $text-muted;
+    text-style: italic;
+    padding: 0 1;
 }
 
 #output_dir {
@@ -35,11 +55,41 @@
     padding: 0 1;
 }
 
-#status {
+#status_bar {
     height: 1;
     background: $panel;
+}
+
+#status {
+    width: auto;
     color: $text-muted;
-    padding: 0 1;
+    padding: 0 0 0 1;
+}
+
+#symlink_text {
+    width: auto;
+    color: $text-muted;
+}
+
+#symlink_key {
+    width: 1;
+    min-width: 1;
+    color: darkorange;
+    text-style: bold;
+    padding: 0;
+}
+
+#symlink_action {
+    width: auto;
+    color: $text-muted;
+}
+
+#detail_explanation {
+    height: auto;
+    max-height: 6;
+    background: #1a2a3a;
+    color: #8abbd4;
+    padding: 1 0;
 }
 
 #detail_header {
@@ -47,7 +97,25 @@
     height: 1;
     background: $panel;
     color: $text;
+}
+
+.view-tab {
+    width: auto;
+    background: $surface;
+    color: $text-muted;
     padding: 0 1;
+}
+
+.view-tab--active {
+    background: $primary;
+    color: $text;
+    text-style: bold;
+}
+
+#detail_path {
+    width: 1fr;
+    padding: 0 1;
+    color: $text-muted;
 }
 
 #detail_panes {
@@ -62,4 +130,81 @@
 #preview_pane {
     width: 2fr;
     padding: 0 1;
+}
+
+#file_content {
+    text-wrap: nowrap;
+    text-overflow: fold;
+}
+
+/* Symlink Review Screen */
+#symlink_header {
+    dock: top;
+    height: 1;
+    background: $primary;
+    color: $text;
+    text-style: bold;
+    padding: 0 1;
+}
+
+#symlink_explanation {
+    dock: top;
+    height: auto;
+    max-height: 10;
+    background: #1a2a3a;
+    color: #8abbd4;
+    padding: 1 0;
+}
+
+#symlink_list {
+    height: 1fr;
+}
+
+#symlink_status {
+    height: 1;
+    background: $panel;
+    color: $text-muted;
+    padding: 0 1;
+}
+
+/* Output Directory Modal */
+#modal_container {
+    width: 70;
+    max-width: 90%;
+    height: auto;
+    margin: 4 0;
+    padding: 1 2;
+    background: $surface;
+    border: tall $primary;
+    align: center middle;
+}
+
+OutputDirModal {
+    align: center middle;
+}
+
+#modal_title {
+    width: 100%;
+    text-align: center;
+    text-style: bold;
+    color: $text;
+    padding: 0 0 1 0;
+}
+
+#modal_current {
+    width: 100%;
+    color: $text-muted;
+    padding: 0 0 1 0;
+}
+
+#modal_input {
+    width: 100%;
+}
+
+#modal_hint {
+    width: 100%;
+    text-align: center;
+    color: $text-muted;
+    text-style: italic;
+    padding: 1 0 0 0;
 }

@@ -5,8 +5,10 @@ from pathlib import Path
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal
+from textual.message import Message
 from textual.reactive import reactive
 from textual.screen import Screen
+from textual.timer import Timer
 from textual.widgets import Footer, Input, Label, SelectionList, Static
 from textual.widgets.selection_list import Selection
 
@@ -18,9 +20,24 @@ from claude_recovery.core.reconstructor import reconstruct_latest
 class FileSelectionList(SelectionList):
     """SelectionList that doesn't toggle on enter — reserves it for detail view."""
 
+    BINDINGS = [
+        Binding("space", "screen_selection_mode", "Range Select", show=True),
+    ]
+
+    class DoubleClicked(Message):
+        """Posted when the list is double-clicked."""
+
     def action_select(self) -> None:
         """Override enter to do nothing; toggle is handled by x key."""
         pass
+
+    def action_screen_selection_mode(self) -> None:
+        """Forward space to the screen's selection mode action."""
+        self.screen.action_selection_mode()
+
+    def on_click(self, event) -> None:
+        if event.chain >= 2:
+            self.post_message(self.DoubleClicked())
 
 
 class FileListScreen(Screen):
@@ -37,6 +54,8 @@ class FileListScreen(Screen):
         Binding("ctrl+e", "extract", "Extract", show=True),
         Binding("ctrl+r", "cycle_mode", "Mode", show=True),
         Binding("enter", "open_detail", "Detail", show=True, priority=True),
+        Binding("s", "open_symlinks", "Symlinks", show=True),
+        Binding("S", "toggle_symlinks", "Toggle Symlinks", show=False),
         Binding("o", "change_output", "Output Dir", show=True),
         Binding("question_mark", "show_help", "Help", show=True),
         Binding("q", "quit_app", "Quit", show=True),
@@ -47,20 +66,36 @@ class FileListScreen(Screen):
         Binding("G", "go_bottom", "Bottom", show=False),  # Shift+G
     ]
 
+    DEBOUNCE_DELAY = 0.3  # seconds
+
     def __init__(self):
         super().__init__()
         self._selection_mode = False
         self._search_query = ""
         self._all_files: list[RecoverableFile] = []
         self._filtered_paths: list[str] = []
+        self._debounce_timer: Timer | None = None
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="search_bar"):
             yield Label("\\[FUZZY]", id="mode_label")
             yield Input(placeholder="Press / to search...", id="filter")
+        yield Static(
+            " Select files with x (or Space for range select), then Ctrl+E to extract the\n"
+            " latest reconstructed state. Press Enter or double-click to open a file's\n"
+            " history — browse snapshots, view diffs, and extract at a specific point in time.\n"
+            "\n"
+            " / to search, Ctrl+R to cycle mode (fuzzy/glob/regex). s for symlink settings.\n"
+            " o to change output directory. j/k navigate, g/G top/bottom, ? for full help.",
+            id="file_explanation",
+        )
         yield FileSelectionList(id="file_list")
         yield Static("", id="output_dir")
-        yield Static("", id="status")
+        with Horizontal(id="status_bar"):
+            yield Static("", id="status")
+            yield Static("", id="symlink_text")
+            yield Label("S", id="symlink_key")
+            yield Static("", id="symlink_action")
         yield Footer()
 
     def on_mount(self) -> None:
@@ -71,8 +106,7 @@ class FileListScreen(Screen):
             reverse=True,
         )
         self._repopulate_list()
-        # Start with list focused, not input
-        self.query_one("#file_list").focus()
+        self.query_one("#filter", Input).focus()
 
     def _repopulate_list(self) -> None:
         """Repopulate the selection list based on current search query."""
@@ -133,12 +167,23 @@ class FileListScreen(Screen):
         filtered = len(self._filtered_paths)
         total = len(self._all_files)
         mode = " [SELECTION MODE]" if self._selection_mode else ""
+        if app.symlinks_enabled and app.merged_file_index:
+            groups = len([g for g in app.symlink_groups if g.aliases])
+            symlink_text = f"symlink detection: enabled ({groups} groups) "
+            key_text = "S"
+            action_text = " to disable"
+        else:
+            symlink_text = "symlink detection: disabled "
+            key_text = "S"
+            action_text = " to enable"
         self.query_one("#output_dir", Static).update(
             f" Output directory: {app.output_dir}"
         )
         self.query_one("#status", Static).update(
             f" {selected} selected | {filtered} shown | {total} total{mode}"
         )
+        self.query_one("#symlink_text", Static).update(f" | {symlink_text}")
+        self.query_one("#symlink_action", Static).update(action_text)
 
     def on_selection_list_selected_changed(self, event) -> None:
         """Track selection state in app.selected_paths."""
@@ -148,9 +193,23 @@ class FileListScreen(Screen):
         self._update_status()
 
     def on_input_changed(self, event: Input.Changed) -> None:
-        """React to search input changes — fuzzy filter the list."""
+        """React to search input changes — debounce then filter."""
         self._search_query = event.value
+        self.query_one("#file_list").add_class("stale")
+        if self._debounce_timer:
+            self._debounce_timer.stop()
+        self._debounce_timer = self.set_timer(
+            self.DEBOUNCE_DELAY, self._apply_filter
+        )
+
+    def _apply_filter(self) -> None:
+        """Called after debounce delay — run the actual filter."""
         self._repopulate_list()
+        self.query_one("#file_list").remove_class("stale")
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        """Switch focus to file list when Enter is pressed in search input."""
+        self.query_one("#file_list", SelectionList).focus()
 
     def on_key(self, event) -> None:
         """Handle Escape key to return focus from search input to file list."""
@@ -218,8 +277,14 @@ class FileListScreen(Screen):
             success += 1
         self.notify(f"Extracted {success} files to {app.output_dir}")
 
+    def on_file_selection_list_double_clicked(self) -> None:
+        self.action_open_detail()
+
     def action_open_detail(self) -> None:
-        """Open the detail view for the highlighted file."""
+        """Open the detail view for the highlighted file, or switch focus from search."""
+        if self.query_one("#filter", Input).has_focus:
+            self.query_one("#file_list", SelectionList).focus()
+            return
         file_list = self.query_one("#file_list", SelectionList)
         idx = file_list.highlighted
         if idx is None:
@@ -231,21 +296,79 @@ class FileListScreen(Screen):
             from claude_recovery.tui.file_detail_screen import FileDetailScreen
             self.app.push_screen(FileDetailScreen(rf))
 
-    def action_change_output(self) -> None:
-        """Prompt for a new output directory via notification."""
-        app = self.app
-        self.notify(
-            f"Current output: {app.output_dir}\n"
-            "Use --output flag to change at startup.",
-            title="Output Directory",
-            timeout=4,
+    def action_toggle_symlinks(self) -> None:
+        """Toggle symlink deduplication on/off."""
+        app = self.app  # type: FileRecoveryApp
+
+        if app.symlinks_enabled:
+            # Turning off — always possible
+            app.symlinks_enabled = False
+            app.file_index = app.raw_file_index
+            self.notify("Symlink deduplication disabled")
+            self._all_files = sorted(
+                app.file_index.values(),
+                key=lambda f: f.latest_timestamp,
+                reverse=True,
+            )
+            self._repopulate_list()
+            return
+
+        # Turning on — use existing merged index if available
+        if app.merged_file_index:
+            app.symlinks_enabled = True
+            app.file_index = app.merged_file_index
+            self.notify("Symlink deduplication enabled")
+            self._all_files = sorted(
+                app.file_index.values(),
+                key=lambda f: f.latest_timestamp,
+                reverse=True,
+            )
+            self._repopulate_list()
+            return
+
+        # No merged index yet — run detection and open the review screen
+        from claude_recovery.core.symlinks import detect_fs_symlinks
+
+        file_paths = list(app.raw_file_index.keys())
+        groups = detect_fs_symlinks(file_paths)
+        app.symlink_groups = groups or []
+        from claude_recovery.tui.symlink_review_screen import SymlinkReviewScreen
+        self.app.push_screen(SymlinkReviewScreen())
+
+    def action_open_symlinks(self) -> None:
+        """Open the symlink review screen."""
+        from claude_recovery.tui.symlink_review_screen import SymlinkReviewScreen
+        self.app.push_screen(SymlinkReviewScreen())
+
+    def on_screen_resume(self) -> None:
+        """Refresh file list when returning from another screen (e.g., after re-merge)."""
+        app = self.app  # type: FileRecoveryApp
+        self._all_files = sorted(
+            app.file_index.values(),
+            key=lambda f: f.latest_timestamp,
+            reverse=True,
         )
+        self._repopulate_list()
+
+    def action_change_output(self) -> None:
+        """Open modal to change the output directory."""
+        from claude_recovery.tui.output_dir_modal import OutputDirModal
+        self.app.push_screen(
+            OutputDirModal(self.app.output_dir),
+            callback=self._handle_output_dir_result,
+        )
+
+    def _handle_output_dir_result(self, result: Path | None) -> None:
+        """Apply the new output directory from the modal."""
+        if result is not None:
+            self.app.output_dir = result
+            self._update_status()
 
     def action_show_help(self) -> None:
         self.notify(
             "/ Search  Ctrl+R Mode  x Select  Space Selection-mode  Ctrl+A Select-all\n"
-            "Ctrl+E Extract  Enter Detail  o Output-dir  q Quit\n"
-            "j/k Up/Down  g/G Top/Bottom",
+            "Ctrl+E Extract  Enter Detail  s Symlinks  S Toggle-symlinks\n"
+            "o Output-dir  j/k Up/Down  g/G Top/Bottom  q Quit",
             title="Keyboard Help",
             timeout=6,
         )

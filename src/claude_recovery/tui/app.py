@@ -5,6 +5,7 @@ from pathlib import Path
 from textual.app import App
 
 from claude_recovery.core.models import RecoverableFile
+from claude_recovery.core.symlinks.models import SymlinkGroup
 
 
 class FileRecoveryApp(App):
@@ -18,13 +19,20 @@ class FileRecoveryApp(App):
         claude_dir: Path,
         output_dir: Path,
         file_index: dict[str, RecoverableFile],
+        symlink_groups: list[SymlinkGroup] | None = None,
+        symlinks_yaml_path: Path | None = None,
     ):
         super().__init__()
         self.claude_dir = claude_dir
         self.output_dir = output_dir
-        self.file_index = file_index
+        self.raw_file_index: dict[str, RecoverableFile] = file_index
+        self.merged_file_index: dict[str, RecoverableFile] | None = None
+        self.file_index: dict[str, RecoverableFile] = file_index
+        self.symlink_groups: list[SymlinkGroup] = symlink_groups or []
+        self.symlinks_yaml_path: Path | None = symlinks_yaml_path
+        self.symlinks_enabled: bool = False
         self.selected_paths: set[str] = set()
 
     def on_mount(self) -> None:
-        from claude_recovery.tui.file_list_screen import FileListScreen
-        self.push_screen(FileListScreen())
+        from claude_recovery.tui.symlink_review_screen import SymlinkReviewScreen
+        self.push_screen(SymlinkReviewScreen())

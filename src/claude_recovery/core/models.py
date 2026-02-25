@@ -32,6 +32,7 @@ class FileOperation:
     tool_use_id: str | None = None
     is_subagent: bool = False
     line_number: int = 0  # JSONL line number (for ordering within session)
+    source_path: str | None = None  # Set during symlink merge for ops from alias paths
 
 
 @dataclass

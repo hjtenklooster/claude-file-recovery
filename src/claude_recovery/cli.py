@@ -126,6 +126,11 @@ def extract_files(
         "--output", "-o",
         help="Output directory for recovered files (default: recovered-{timestamp})",
     ),
+    symlink_file: Path = typer.Option(
+        None,
+        "--symlink-file",
+        help="Path to a YAML file with symlink mappings for deduplication",
+    ),
     filter_pattern: str = typer.Option(
         "",
         "--filter", "-f",
@@ -154,6 +159,14 @@ def extract_files(
         output_dir = _default_output_dir()
 
     files = _scan_with_progress(claude_dir)
+
+    # Apply symlink deduplication if YAML provided
+    if symlink_file and symlink_file.exists():
+        from claude_recovery.core.symlinks import load_symlink_yaml, merge_file_index
+        groups = load_symlink_yaml(symlink_file)
+        if groups:
+            console.print(f"Applying {len(groups)} symlink mappings for deduplication...")
+            files = merge_file_index(files, groups)
 
     # Apply filter
     case_override = True if case_sensitive else (False if ignore_case else None)
@@ -198,6 +211,69 @@ def extract_files(
     )
 
 
+@app.command("identify-symlinks")
+def identify_symlinks(
+    claude_dir: Path = typer.Option(
+        Path.home() / ".claude",
+        "--claude-dir", "-c",
+        help="Path to Claude Code user config directory",
+    ),
+    output: Path = typer.Option(
+        Path("./symlinks.yaml"),
+        "--output", "-o",
+        help="Output path for the YAML symlink mapping file",
+    ),
+    no_symlink_detection: bool = typer.Option(
+        False,
+        "--no-symlink-detection",
+        is_flag=True,
+        help="Disable filesystem-based symlink detection",
+    ),
+):
+    """Detect symlinked file paths and write a YAML mapping file."""
+    from claude_recovery.core.symlinks import (
+        detect_fs_symlinks,
+        save_symlink_yaml,
+    )
+
+    files = _scan_with_progress(claude_dir)
+    file_paths = list(files.keys())
+    console.print(f"Analyzing {len(file_paths)} file paths for symlinks...")
+
+    groups = []
+
+    if not no_symlink_detection:
+        console.print("Running filesystem detection...")
+        groups = detect_fs_symlinks(file_paths)
+        console.print(f"  Found {len(groups)} symlink groups via filesystem")
+
+    if not groups:
+        console.print("[yellow]No symlink mappings detected.[/yellow]")
+        raise typer.Exit()
+
+    # Display summary table
+    table = Table(title=f"Symlink Mappings ({len(groups)} groups)")
+    table.add_column("Canonical Path", style="cyan")
+    table.add_column("Alias", style="white")
+    table.add_column("Method", style="green", justify="center")
+
+    for group in groups:
+        first = True
+        for alias in group.aliases:
+            method = group.detection_methods.get(alias, "?")
+            table.add_row(
+                group.canonical if first else "",
+                alias,
+                f"[{method}]",
+            )
+            first = False
+
+    console.print(table)
+
+    save_symlink_yaml(groups, output)
+    console.print(f"\nSymlink mappings written to [bold]{output}[/bold]")
+
+
 @app.callback(invoke_without_command=True)
 def default(
     ctx: typer.Context,
@@ -211,12 +287,23 @@ def default(
         "--output", "-o",
         help="Output directory for recovered files (default: recovered-{timestamp})",
     ),
+    symlink_file: Path = typer.Option(
+        None,
+        "--symlink-file",
+        help="Path to a YAML file with pre-defined symlink mappings",
+    ),
+    no_symlink_detection: bool = typer.Option(
+        False,
+        "--no-symlink-detection",
+        is_flag=True,
+        help="Disable filesystem-based symlink detection",
+    ),
 ):
     """Default command — launches the interactive TUI."""
     if ctx.invoked_subcommand is None:
         if output_dir is None:
             output_dir = _default_output_dir()
-        _launch_tui_impl(claude_dir, output_dir)
+        _launch_tui_impl(claude_dir, output_dir, symlink_file, no_symlink_detection)
 
 
 @app.command("tui")
@@ -231,22 +318,80 @@ def tui_command(
         "--output", "-o",
         help="Output directory for recovered files (default: recovered-{timestamp})",
     ),
+    symlink_file: Path = typer.Option(
+        None,
+        "--symlink-file",
+        help="Path to a YAML file with pre-defined symlink mappings",
+    ),
+    no_symlink_detection: bool = typer.Option(
+        False,
+        "--no-symlink-detection",
+        is_flag=True,
+        help="Disable filesystem-based symlink detection",
+    ),
 ):
     """Launch the interactive TUI."""
     if output_dir is None:
         output_dir = _default_output_dir()
-    _launch_tui_impl(claude_dir, output_dir)
+    _launch_tui_impl(claude_dir, output_dir, symlink_file, no_symlink_detection)
 
 
-def _launch_tui_impl(claude_dir: Path, output_dir: Path):
+def _launch_tui_impl(
+    claude_dir: Path,
+    output_dir: Path,
+    symlinks_yaml: Path | None = None,
+    no_symlink_detection: bool = False,
+):
     """Scan sessions and launch the Textual TUI."""
     file_index = _scan_with_progress(claude_dir)
     console.print(f"Found {len(file_index)} recoverable files. Launching TUI...")
+
+    # Detect or load symlink mappings
+    from claude_recovery.core.symlinks import (
+        detect_fs_symlinks,
+        load_symlink_yaml,
+    )
+
+    symlink_groups = []
+    symlinks_yaml_path = symlinks_yaml
+
+    if symlinks_yaml and symlinks_yaml.exists():
+        console.print(f"Loading symlink mappings from {symlinks_yaml}...")
+        symlink_groups = load_symlink_yaml(symlinks_yaml)
+        console.print(f"  Loaded {len(symlink_groups)} groups")
+    else:
+        file_paths = list(file_index.keys())
+
+        if not no_symlink_detection:
+            symlink_groups = detect_fs_symlinks(file_paths)
+
+        if symlink_groups:
+            console.print(f"Detected {len(symlink_groups)} symlink groups")
 
     from claude_recovery.tui.app import FileRecoveryApp
     tui_app = FileRecoveryApp(
         claude_dir=claude_dir,
         output_dir=output_dir,
         file_index=file_index,
+        symlink_groups=symlink_groups if symlink_groups else None,
+        symlinks_yaml_path=symlinks_yaml_path,
     )
     tui_app.run()
+
+    # Print resume command — detect how the CLI was invoked
+    import os, sys
+    parent_cmd = os.environ.get("_", "")
+    if "uv" in parent_cmd:
+        cmd = "uv run claude-recovery"
+    elif sys.argv[0].endswith("claude-recovery"):
+        cmd = "claude-recovery"
+    else:
+        cmd = "python -m claude_recovery"
+    parts = [cmd]
+    parts.append(f"--claude-dir {tui_app.claude_dir}")
+    parts.append(f"--output {tui_app.output_dir}")
+    if tui_app.symlinks_enabled and tui_app.symlinks_yaml_path:
+        parts.append(f"--symlink-file {tui_app.symlinks_yaml_path}")
+    elif not tui_app.symlinks_enabled:
+        parts.append("--no-symlink-detection")
+    console.print(f"\nResume with:\n  {' '.join(parts)}", soft_wrap=True)
