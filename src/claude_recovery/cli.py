@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from importlib.metadata import version
 from pathlib import Path
 
 import typer
@@ -18,6 +19,13 @@ from claude_recovery.core.timestamps import (
     format_local_confirmation,
     utc_to_local,
 )
+
+
+def _version_callback(value: bool) -> None:
+    if value:
+        print(f"claude-recovery {version('claude-recovery')}")
+        raise typer.Exit()
+
 
 app = typer.Typer(
     name="claude-recovery",
@@ -392,6 +400,15 @@ def identify_symlinks(
 @app.callback(invoke_without_command=True)
 def default(
     ctx: typer.Context,
+    version_flag: bool = typer.Option(
+        False,
+        "--version",
+        "-V",
+        help="Show version and exit",
+        is_eager=True,
+        callback=_version_callback,
+        is_flag=True,
+    ),
     claude_dir: Path = typer.Option(
         Path.home() / ".claude",
         "--claude-dir",
