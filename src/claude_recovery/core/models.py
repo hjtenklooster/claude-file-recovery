@@ -28,6 +28,9 @@ class FileOperation:
     replace_all: bool = False  # For edit
     read_offset: int | None = None  # For read: starting line number (1-indexed)
     read_limit: int | None = None  # For read: number of lines to read
+    read_start_line: int | None = None  # For read: actual start line from toolUseResult.file
+    read_num_lines: int | None = None  # For read: actual line count from toolUseResult.file
+    read_total_lines: int | None = None  # For read: total file lines from toolUseResult.file
     # Error state — set when tool_result has is_error: true
     is_error: bool = False
     error_message: str | None = None

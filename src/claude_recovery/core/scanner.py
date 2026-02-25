@@ -14,7 +14,8 @@ from claude_recovery.core.reconstructor import apply_edit
 def discover_jsonl_files(backup_dir: Path) -> list[Path]:
     """Find all session JSONL files including subagent files.
 
-    Walks projects/<slug>/*.jsonl and projects/<slug>/<session>/subagents/*.jsonl.
+    Walks projects/<slug>/*.jsonl (including .jsonl.backup.*) and
+    projects/<slug>/<session>/subagents/*.jsonl.
     """
     projects_dir = backup_dir / "projects"
     if not projects_dir.exists():
@@ -23,7 +24,7 @@ def discover_jsonl_files(backup_dir: Path) -> list[Path]:
     jsonl_files: list[Path] = []
     for root, dirs, files in os.walk(projects_dir):
         for f in files:
-            if f.endswith(".jsonl"):
+            if f.endswith(".jsonl") or ".jsonl.backup" in f:
                 jsonl_files.append(Path(root) / f)
     return jsonl_files
 
@@ -36,12 +37,14 @@ def _is_subagent_file(path: Path) -> bool:
 def _extract_session_id(path: Path) -> str:
     """Extract session UUID from the JSONL file path."""
     # Main session: projects/<slug>/<uuid>.jsonl
+    # Backup: projects/<slug>/<uuid>.jsonl.backup.<timestamp>
     # Subagent: projects/<slug>/<uuid>/subagents/agent-<hex>.jsonl
     if _is_subagent_file(path):
         # The session UUID is the parent of 'subagents' directory
         idx = path.parts.index("subagents")
         return path.parts[idx - 1]
-    return path.stem
+    # Split on ".jsonl" to handle both uuid.jsonl and uuid.jsonl.backup.TS
+    return path.name.split(".jsonl")[0]
 
 
 def strip_read_line_numbers(text: str) -> str:
@@ -135,8 +138,14 @@ def _enrich_from_tool_use_result(result: dict, pending_ops: dict[str, FileOperat
 
     Write toolUseResult has: type, filePath, content, structuredPatch, originalFile
     Edit toolUseResult has: filePath, oldString, newString, originalFile, structuredPatch, replaceAll
+    Read toolUseResult has: type, file (dict with filePath, content, startLine, numLines, totalLines)
     """
     file_path = result.get("filePath", "")
+    # Read toolUseResult nests filePath inside the 'file' dict
+    if not file_path:
+        file_info = result.get("file")
+        if isinstance(file_info, dict):
+            file_path = file_info.get("filePath", "")
     if not file_path:
         return
 
@@ -169,28 +178,41 @@ def _enrich_from_tool_use_result(result: dict, pending_ops: dict[str, FileOperat
             matching_op.new_string = result["newString"]
         if "replaceAll" in result:
             matching_op.replace_all = result["replaceAll"]
+    elif matching_op.type == OpType.READ:
+        # Read toolUseResult — extract response metadata from file dict
+        file_info = result.get("file")
+        if isinstance(file_info, dict):
+            start_line = file_info.get("startLine")
+            num_lines = file_info.get("numLines")
+            total_lines = file_info.get("totalLines")
+            if isinstance(start_line, int):
+                matching_op.read_start_line = start_line
+            if isinstance(num_lines, int):
+                matching_op.read_num_lines = num_lines
+            if isinstance(total_lines, int):
+                matching_op.read_total_lines = total_lines
 
 
-def scan_session(path: Path) -> list[FileOperation]:
+def scan_session(path: Path, backup_dir: Path | None = None) -> list[FileOperation]:
     """Scan a single JSONL session file for file operations.
 
     Extracts both metadata (file path, timestamp, type) and content
     (toolUseResult fields for Write/Edit, inline content for Read).
+    When backup_dir is provided, also parses file-history-snapshot entries
+    and reads corresponding disk files from file-history/<session-id>/.
     """
     ops: list[FileOperation] = []
     # Map tool_use_id -> FileOperation for correlating with toolUseResult
     pending_ops: dict[str, FileOperation] = {}
     is_subagent = _is_subagent_file(path)
     session_id = _extract_session_id(path)
+    cwd: str | None = None  # Populated from first entry with cwd field
 
     with open(path, "rb") as f:
         for line_num, line in enumerate(f, 1):
             # Fast reject: 77% of lines are progress entries
             if b'"type":"progress"' in line or b'"type": "progress"' in line:
                 continue
-            if b'"type":"file-history-snapshot"' in line or b'"type": "file-history-snapshot"' in line:
-                continue
-
             try:
                 entry = orjson.loads(line)
             except orjson.JSONDecodeError:
@@ -198,6 +220,12 @@ def scan_session(path: Path) -> list[FileOperation]:
 
             entry_type = entry.get("type")
             timestamp = entry.get("timestamp", "")
+
+            # Track cwd for resolving relative paths in file-history snapshots
+            if cwd is None:
+                entry_cwd = entry.get("cwd")
+                if entry_cwd:
+                    cwd = entry_cwd
 
             if entry_type == "assistant":
                 # Scan for Write/Edit/Read tool_use blocks
@@ -261,6 +289,17 @@ def scan_session(path: Path) -> list[FileOperation]:
                 # Extract content from toolUseResult (top-level field)
                 tool_result = entry.get("toolUseResult")
                 if isinstance(tool_result, dict) and tool_result:
+                    # Resolve externalized tool output if present
+                    persisted_path = tool_result.get("persistedOutputPath")
+                    if persisted_path:
+                        try:
+                            full_content = Path(persisted_path).read_text(
+                                encoding="utf-8", errors="replace"
+                            )
+                            tool_result["stdout"] = full_content
+                        except (OSError, IOError):
+                            pass  # Keep truncated content if file not found
+
                     _enrich_from_tool_use_result(tool_result, pending_ops)
 
                 # Also detect errors from top-level toolUseResult string
@@ -287,6 +326,22 @@ def scan_session(path: Path) -> list[FileOperation]:
                             continue
                         if block.get("type") == "tool_result":
                             tool_use_id = block.get("tool_use_id")
+                            # Resolve persisted output in tool_result content
+                            block_content = block.get("content", "")
+                            if (
+                                isinstance(block_content, str)
+                                and block_content.startswith("<persisted-output>")
+                                and isinstance(tool_result, dict)
+                                and tool_result.get("persistedOutputPath")
+                            ):
+                                try:
+                                    full_content = Path(
+                                        tool_result["persistedOutputPath"]
+                                    ).read_text(encoding="utf-8", errors="replace")
+                                    block["content"] = full_content
+                                except (OSError, IOError):
+                                    pass  # Keep truncated content
+
                             if tool_use_id and tool_use_id in pending_ops:
                                 op = pending_ops[tool_use_id]
                                 if block.get("is_error"):
@@ -301,6 +356,38 @@ def scan_session(path: Path) -> list[FileOperation]:
                                         op.content = strip_read_line_numbers(raw)
                                     elif isinstance(raw, str):
                                         op.content = raw
+
+            elif entry_type == "file-history-snapshot" and backup_dir is not None:
+                snapshot = entry.get("snapshot", {})
+                tracked = snapshot.get("trackedFileBackups", {})
+                for rel_path, backup_info in tracked.items():
+                    backup_filename = backup_info.get("backupFileName")
+                    backup_time = backup_info.get("backupTime", timestamp)
+                    if not backup_filename:
+                        continue
+
+                    # Resolve relative path to absolute using session cwd
+                    if cwd and not os.path.isabs(rel_path):
+                        abs_path = os.path.normpath(os.path.join(cwd, rel_path))
+                    else:
+                        abs_path = rel_path
+
+                    # Read the snapshot file from disk
+                    snapshot_file = backup_dir / "file-history" / session_id / backup_filename
+                    try:
+                        file_content = snapshot_file.read_text(encoding="utf-8", errors="replace")
+                    except (OSError, IOError):
+                        continue  # Skip if file doesn't exist or can't be read
+
+                    op = FileOperation(
+                        type=OpType.FILE_HISTORY,
+                        file_path=abs_path,
+                        timestamp=backup_time,
+                        session_id=session_id,
+                        content=file_content,
+                        line_number=line_num,
+                    )
+                    ops.append(op)
 
     return [op for op in ops if not _is_noop_edit(op)]
 
@@ -321,7 +408,7 @@ def scan_all_sessions(
     total = len(jsonl_files)
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(scan_session, p): p for p in jsonl_files}
+        futures = {executor.submit(scan_session, p, backup_dir): p for p in jsonl_files}
         for future in as_completed(futures):
             completed += 1
             if progress_callback:
