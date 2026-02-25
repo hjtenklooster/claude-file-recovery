@@ -80,9 +80,28 @@ def list_files(
         "--csv",
         help="Output in CSV format",
     ),
+    no_injection_detection: bool = typer.Option(
+        False,
+        "--no-injection-detection",
+        is_flag=True,
+        help="Disable detection of injected content in Read operations",
+    ),
 ):
     """List all recoverable files with paths and latest modification dates."""
     files = _scan_with_progress(claude_dir)
+
+    # Detect injected content (warn only, no stripping — list-files doesn't output content)
+    if not no_injection_detection:
+        from claude_recovery.core.injection import detect_injected_content
+        patterns = detect_injected_content(files)
+        if patterns:
+            total_ops = sum(p.affected_op_count for p in patterns)
+            total_files = sum(p.affected_file_count for p in patterns)
+            console.print(
+                f"[yellow]Detected injected content in {total_ops} Read operations "
+                f"across {total_files} files. Use extract-files to strip, or "
+                f"--no-injection-detection to suppress this warning.[/yellow]"
+            )
 
     # Apply filter
     case_override = True if case_sensitive else (False if ignore_case else None)
@@ -175,12 +194,31 @@ def extract_files(
         "--before", "-b",
         help="Only include operations at or before this timestamp (e.g. '2026-01-30', '2026-01-30 15:00')",
     ),
+    no_injection_detection: bool = typer.Option(
+        False,
+        "--no-injection-detection",
+        is_flag=True,
+        help="Disable detection and removal of injected content in Read operations",
+    ),
 ):
     """Extract recovered files to disk, preserving directory structure."""
     if output_dir is None:
         output_dir = _default_output_dir()
 
     files = _scan_with_progress(claude_dir)
+
+    # Detect and strip injected content
+    if not no_injection_detection:
+        from claude_recovery.core.injection import detect_injected_content, strip_injected_content
+        patterns = detect_injected_content(files)
+        if patterns:
+            total_ops = sum(p.affected_op_count for p in patterns)
+            total_files = sum(p.affected_file_count for p in patterns)
+            console.print(
+                f"[yellow]Detected injected content in {total_ops} Read operations "
+                f"across {total_files} files. Stripping from recovered content.[/yellow]"
+            )
+            strip_injected_content(files, patterns)
 
     # Apply symlink deduplication if YAML provided
     if symlink_file and symlink_file.exists():
@@ -336,12 +374,18 @@ def default(
         is_flag=True,
         help="Disable filesystem-based symlink detection",
     ),
+    no_injection_detection: bool = typer.Option(
+        False,
+        "--no-injection-detection",
+        is_flag=True,
+        help="Disable detection and removal of injected content in Read operations",
+    ),
 ):
     """Default command — launches the interactive TUI."""
     if ctx.invoked_subcommand is None:
         if output_dir is None:
             output_dir = _default_output_dir()
-        _launch_tui_impl(claude_dir, output_dir, symlink_file, no_symlink_detection)
+        _launch_tui_impl(claude_dir, output_dir, symlink_file, no_symlink_detection, no_injection_detection)
 
 
 @app.command("tui")
@@ -367,11 +411,17 @@ def tui_command(
         is_flag=True,
         help="Disable filesystem-based symlink detection",
     ),
+    no_injection_detection: bool = typer.Option(
+        False,
+        "--no-injection-detection",
+        is_flag=True,
+        help="Disable detection and removal of injected content in Read operations",
+    ),
 ):
     """Launch the interactive TUI."""
     if output_dir is None:
         output_dir = _default_output_dir()
-    _launch_tui_impl(claude_dir, output_dir, symlink_file, no_symlink_detection)
+    _launch_tui_impl(claude_dir, output_dir, symlink_file, no_symlink_detection, no_injection_detection)
 
 
 def _launch_tui_impl(
@@ -379,10 +429,20 @@ def _launch_tui_impl(
     output_dir: Path,
     symlinks_yaml: Path | None = None,
     no_symlink_detection: bool = False,
+    no_injection_detection: bool = False,
 ):
     """Scan sessions and launch the Textual TUI."""
     file_index = _scan_with_progress(claude_dir)
     console.print(f"Found {len(file_index)} recoverable files. Launching TUI...")
+
+    # Detect injected content
+    injection_patterns = []
+    if not no_injection_detection:
+        from claude_recovery.core.injection import detect_injected_content
+        injection_patterns = detect_injected_content(file_index)
+        if injection_patterns:
+            total_ops = sum(p.affected_op_count for p in injection_patterns)
+            console.print(f"Detected injected content in {total_ops} Read operations")
 
     # Detect or load symlink mappings
     from claude_recovery.core.symlinks import (
@@ -413,6 +473,7 @@ def _launch_tui_impl(
         file_index=file_index,
         symlink_groups=symlink_groups if symlink_groups else None,
         symlinks_yaml_path=symlinks_yaml_path,
+        injection_patterns=injection_patterns,
     )
     tui_app.run()
 

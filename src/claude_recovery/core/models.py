@@ -68,3 +68,15 @@ class RecoverableFile:
             key = op.type.value.split("_")[0]  # write, edit, read, file
             counts[key] = counts.get(key, 0) + 1
         return ", ".join(f"{v} {k}{'s' if v != 1 else ''}" for k, v in sorted(counts.items()))
+
+
+@dataclass
+class InjectedContentPattern:
+    """A detected pattern of injected content found across multiple Read operations."""
+
+    pattern_id: str  # Descriptive name, e.g. "trailing-suffix-1"
+    content: str  # The full injected content string
+    affected_op_count: int  # Number of Read ops containing this pattern
+    affected_file_count: int  # Number of unique files affected
+    sample: str  # Truncated sample for display (first 120 chars)
+    detection_method: str  # "threshold-suffix"

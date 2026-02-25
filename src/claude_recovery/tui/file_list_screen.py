@@ -262,6 +262,14 @@ class FileListScreen(Screen):
         if not app.selected_paths:
             self.notify("No files selected", severity="warning")
             return
+        # Warn if injected content was not stripped
+        if app.injection_patterns and not app.injection_stripped:
+            self.notify(
+                "Warning: injected content was NOT stripped (you chose to skip). "
+                "Extracted files may contain injected tags.",
+                severity="warning",
+                timeout=6,
+            )
         success = 0
         for path in app.selected_paths:
             rf = app.file_index.get(path)

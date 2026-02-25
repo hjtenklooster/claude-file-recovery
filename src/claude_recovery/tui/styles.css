@@ -167,6 +167,32 @@
     padding: 0 1;
 }
 
+/* Injection Review Screen */
+#injection_header {
+    dock: top;
+    height: 1;
+    background: darkorange;
+    color: $text;
+    text-style: bold;
+    padding: 0 1;
+}
+
+#injection_explanation {
+    dock: top;
+    height: auto;
+    max-height: 80%;
+    background: #1a2a3a;
+    color: #8abbd4;
+    padding: 1 0;
+}
+
+#injection_status {
+    height: 1;
+    background: $panel;
+    color: $text-muted;
+    padding: 0 1;
+}
+
 /* Output Directory Modal */
 #modal_container {
     width: 70;

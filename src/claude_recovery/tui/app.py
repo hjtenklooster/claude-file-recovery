@@ -4,7 +4,7 @@ from pathlib import Path
 
 from textual.app import App
 
-from claude_recovery.core.models import RecoverableFile
+from claude_recovery.core.models import InjectedContentPattern, RecoverableFile
 from claude_recovery.core.symlinks.models import SymlinkGroup
 
 
@@ -21,6 +21,7 @@ class FileRecoveryApp(App):
         file_index: dict[str, RecoverableFile],
         symlink_groups: list[SymlinkGroup] | None = None,
         symlinks_yaml_path: Path | None = None,
+        injection_patterns: list[InjectedContentPattern] | None = None,
     ):
         super().__init__()
         self.claude_dir = claude_dir
@@ -32,7 +33,11 @@ class FileRecoveryApp(App):
         self.symlinks_yaml_path: Path | None = symlinks_yaml_path
         self.symlinks_enabled: bool = False
         self.selected_paths: set[str] = set()
+        self.injection_patterns: list[InjectedContentPattern] = injection_patterns or []
+        self.injection_stripped: bool = False
 
     def on_mount(self) -> None:
         from claude_recovery.tui.symlink_review_screen import SymlinkReviewScreen
         self.push_screen(SymlinkReviewScreen())
+        from claude_recovery.tui.injection_review_screen import InjectionReviewScreen
+        self.push_screen(InjectionReviewScreen())
