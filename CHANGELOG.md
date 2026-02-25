@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-02-25
+
 ### Added
 - CLI commands: `list-files`, `extract-files`, and `tui` (default when invoked without subcommand)
 - Interactive TUI with fuzzy search, vim keybindings (j/k/g/G), and multi-select
@@ -27,4 +29,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - TUI injection review screen with confirm/skip before file browsing
 - `--no-injection-detection` flag to disable injected content filtering
 
-[Unreleased]: https://github.com/hjtenklooster/claude-recovery/commits/main
+[Unreleased]: https://github.com/hjtenklooster/claude-recovery/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/hjtenklooster/claude-recovery/releases/tag/v0.1.0
