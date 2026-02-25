@@ -8,7 +8,7 @@ Recover files created and modified by [Claude Code](https://docs.anthropic.com/e
 
 Claude Code stores a full log of every tool call in `~/.claude/projects/`. This tool parses those transcripts, replays Write, Edit, and Read operations in order, and reconstructs the files so you can browse, search, and extract them.
 
-![claude-recovery TUI demo](demo/demo.gif)
+![claude-recovery TUI demo](https://raw.githubusercontent.com/hjtenklooster/claude-recovery/main/demo/demo.gif)
 
 ## Features
 
