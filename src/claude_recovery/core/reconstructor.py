@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import bisect
+
 from claude_recovery.core.models import FileOperation, OpType, RecoverableFile
 
 
@@ -52,3 +54,19 @@ def reconstruct_latest(file: RecoverableFile) -> str | None:
     if not file.operations:
         return None
     return reconstruct_file_at(file.operations, len(file.operations) - 1)
+
+
+def reconstruct_at_timestamp(file: RecoverableFile, before_ts: str) -> str | None:
+    """Reconstruct file content at a specific point in time.
+
+    Finds the last operation where op.timestamp <= before_ts using bisect,
+    then delegates to reconstruct_file_at(). Returns None if no operations
+    qualify (all ops are after the cutoff).
+    """
+    if not file.operations:
+        return None
+    timestamps = [op.timestamp for op in file.operations]
+    idx = bisect.bisect_right(timestamps, before_ts) - 1
+    if idx < 0:
+        return None
+    return reconstruct_file_at(file.operations, idx)

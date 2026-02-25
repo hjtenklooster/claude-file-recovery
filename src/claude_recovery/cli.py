@@ -7,8 +7,8 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from claude_recovery.core.filters import SearchMode, filter_files
-from claude_recovery.core.reconstructor import reconstruct_latest
+from claude_recovery.core.filters import SearchMode, filter_files, filter_by_timestamp
+from claude_recovery.core.reconstructor import reconstruct_at_timestamp, reconstruct_latest
 from claude_recovery.core.scanner import scan_all_sessions
 
 app = typer.Typer(
@@ -69,6 +69,11 @@ def list_files(
         is_flag=True,
         help="Force case-insensitive matching (default: smart-case)",
     ),
+    before: str = typer.Option(
+        "",
+        "--before", "-b",
+        help="Only include operations at or before this timestamp (e.g. '2026-01-30', '2026-01-30 15:00')",
+    ),
     csv: bool = typer.Option(
         False,
         "--csv",
@@ -81,6 +86,18 @@ def list_files(
     # Apply filter
     case_override = True if case_sensitive else (False if ignore_case else None)
     files = filter_files(files, filter_pattern, mode, case_override)
+
+    # Apply timestamp filter
+    before_ts = ""
+    if before:
+        from claude_recovery.core.timestamps import normalize_timestamp, format_local_confirmation
+        try:
+            before_ts = normalize_timestamp(before)
+        except ValueError as e:
+            console.print(f"[red]Invalid --before timestamp: {e}[/red]")
+            raise typer.Exit(code=1)
+        console.print(f"Filtering operations before {format_local_confirmation(before_ts)}")
+        files = filter_by_timestamp(files, before_ts)
 
     # Sort by path (filename + directory)
     sorted_files = sorted(files.values(), key=lambda f: f.path)
@@ -153,6 +170,11 @@ def extract_files(
         is_flag=True,
         help="Force case-insensitive matching (default: smart-case)",
     ),
+    before: str = typer.Option(
+        "",
+        "--before", "-b",
+        help="Only include operations at or before this timestamp (e.g. '2026-01-30', '2026-01-30 15:00')",
+    ),
 ):
     """Extract recovered files to disk, preserving directory structure."""
     if output_dir is None:
@@ -172,6 +194,18 @@ def extract_files(
     case_override = True if case_sensitive else (False if ignore_case else None)
     files = filter_files(files, filter_pattern, mode, case_override)
 
+    # Apply timestamp filter
+    before_ts = ""
+    if before:
+        from claude_recovery.core.timestamps import normalize_timestamp, format_local_confirmation
+        try:
+            before_ts = normalize_timestamp(before)
+        except ValueError as e:
+            console.print(f"[red]Invalid --before timestamp: {e}[/red]")
+            raise typer.Exit(code=1)
+        console.print(f"Filtering operations before {format_local_confirmation(before_ts)}")
+        files = filter_by_timestamp(files, before_ts)
+
     if not files:
         console.print("[yellow]No files match the filter.[/yellow]")
         raise typer.Exit()
@@ -188,7 +222,10 @@ def extract_files(
 
         for rf in files.values():
             progress.advance(task)
-            content = reconstruct_latest(rf)
+            if before_ts:
+                content = reconstruct_at_timestamp(rf, before_ts)
+            else:
+                content = reconstruct_latest(rf)
             if content is None:
                 skipped += 1
                 continue

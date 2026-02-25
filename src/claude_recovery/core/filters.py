@@ -107,3 +107,22 @@ def filter_files(
         for path, rf in files.items()
         if match_path(path, pattern, mode, case_sensitive) > 0
     }
+
+
+def filter_by_timestamp(
+    files: dict[str, object],
+    before_ts: str,
+) -> dict[str, object]:
+    """Exclude files where ALL operations are after the cutoff timestamp.
+
+    Returns a new dict containing only files that have at least one
+    operation with timestamp <= before_ts. Short-circuits on empty before_ts.
+    """
+    if not before_ts:
+        return files
+
+    return {
+        path: rf
+        for path, rf in files.items()
+        if any(op.timestamp <= before_ts for op in rf.operations)
+    }
