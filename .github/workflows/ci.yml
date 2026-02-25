@@ -42,10 +42,10 @@ jobs:
         run: uv python install ${{ matrix.python-version }}
 
       - name: Install package
-        run: uv pip install --system -e .
+        run: uv sync
 
       - name: Verify CLI entry point
-        run: claude-recovery --help
+        run: uv run claude-recovery --help
 
       - name: Build package
         run: uv build
