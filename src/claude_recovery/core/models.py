@@ -59,9 +59,13 @@ class RecoverableFile:
 
     @property
     def has_full_content(self) -> bool:
-        """Whether full file recovery is possible (has a Write or Read, not just Edits)."""
-        full_types = {OpType.WRITE_CREATE, OpType.WRITE_UPDATE, OpType.READ, OpType.FILE_HISTORY}
-        return any(op.type in full_types for op in self.operations)
+        """Whether full file recovery is possible (has a Write, full Read, or file-history, not just Edits/partial Reads)."""
+        for op in self.operations:
+            if op.type in (OpType.WRITE_CREATE, OpType.WRITE_UPDATE, OpType.FILE_HISTORY):
+                return True
+            if op.type == OpType.READ and op.read_offset is None and op.read_limit is None:
+                return True
+        return False
 
     @property
     def op_type_summary(self) -> str:

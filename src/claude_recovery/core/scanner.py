@@ -8,7 +8,7 @@ from pathlib import Path
 import orjson
 
 from claude_recovery.core.models import FileOperation, OpType, RecoverableFile
-from claude_recovery.core.reconstructor import apply_edit
+from claude_recovery.core.reconstructor import apply_edit, splice_read
 
 
 def discover_jsonl_files(backup_dir: Path) -> list[Path]:
@@ -97,8 +97,26 @@ def _filter_noop_edits_by_replay(operations: list[FileOperation]) -> list[FileOp
             content = op.content
             result.append(op)
         elif op.type == OpType.READ:
-            if content is None and op.content is not None:
-                content = op.content
+            if op.content is not None:
+                # Mirror reconstructor's is_full logic exactly, including request-param fallback
+                if op.read_start_line is not None:
+                    is_full = op.read_start_line == 1 and op.read_num_lines == op.read_total_lines
+                else:
+                    is_full = op.read_offset is None and op.read_limit is None
+                if is_full:
+                    content = op.content
+                else:
+                    start_line = op.read_start_line or op.read_offset
+                    if content is None:
+                        content = splice_read(
+                            None, op.content, start_line,
+                            op.read_num_lines, op.read_total_lines,
+                        )
+                    else:
+                        content = splice_read(
+                            content, op.content, start_line,
+                            op.read_num_lines, op.read_total_lines,
+                        )
             result.append(op)
         elif op.type == OpType.FILE_HISTORY:
             if op.content is not None:
