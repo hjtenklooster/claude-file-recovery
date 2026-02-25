@@ -88,8 +88,6 @@ claude-recovery --claude-dir /path/to/claude-backup
 
 Contributions are welcome! Feel free to open an issue or submit a pull request.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup instructions.
-
 ## License
 
 [MIT](LICENSE) — Rikkert ten Klooster
