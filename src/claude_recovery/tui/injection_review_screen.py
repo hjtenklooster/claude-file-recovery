@@ -50,14 +50,18 @@ class InjectionReviewScreen(Screen):
         ]
 
         for p in patterns:
-            lines.append(f" {p.affected_op_count} ops in {p.affected_file_count} files:")
+            lines.append(
+                f" {p.affected_op_count} ops in {p.affected_file_count} files:"
+            )
             lines.append(" " + "─" * 60)
             for content_line in p.content.splitlines():
                 lines.append(f" {content_line}")
             lines.append(" " + "─" * 60)
             lines.append("")
 
-        lines.append(" Press Enter to strip injected content, or s to skip and keep raw content.")
+        lines.append(
+            " Press Enter to strip injected content, or s to skip and keep raw content."
+        )
 
         self.query_one("#injection_explanation", Static).update("\n".join(lines))
         self.query_one("#injection_status", Static).update(
@@ -71,6 +75,7 @@ class InjectionReviewScreen(Screen):
 
         if app.injection_patterns:
             from claude_recovery.core.injection import strip_injected_content
+
             strip_injected_content(app.raw_file_index, app.injection_patterns)
             # Also strip from merged index if it exists
             if app.merged_file_index:
@@ -99,6 +104,7 @@ class InjectionReviewScreen(Screen):
         screen_stack = self.app.screen_stack
         if len(screen_stack) >= 2:
             from claude_recovery.tui.file_list_screen import FileListScreen
+
             if isinstance(screen_stack[-2], FileListScreen):
                 self.app.pop_screen()
                 return

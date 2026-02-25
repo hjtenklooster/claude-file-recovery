@@ -66,10 +66,12 @@ def detect_fs_symlinks(file_paths: list[str]) -> list[SymlinkGroup]:
     groups = []
     for target, symlink_paths in target_to_symlinks.items():
         methods = {sp: "FS" for sp in symlink_paths}
-        groups.append(SymlinkGroup(
-            canonical=target,
-            aliases=sorted(symlink_paths),
-            detection_methods=methods,
-        ))
+        groups.append(
+            SymlinkGroup(
+                canonical=target,
+                aliases=sorted(symlink_paths),
+                detection_methods=methods,
+            )
+        )
 
     return groups

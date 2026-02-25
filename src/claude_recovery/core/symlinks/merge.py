@@ -34,7 +34,7 @@ def merge_file_index(
         for alias in sorted_aliases:
             if path == alias or path.startswith(alias + "/"):
                 canonical_prefix = alias_to_canonical[alias]
-                canonical_path = canonical_prefix + path[len(alias):]
+                canonical_path = canonical_prefix + path[len(alias) :]
                 return canonical_path, path
         return path, None
 

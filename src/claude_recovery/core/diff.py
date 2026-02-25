@@ -8,9 +8,9 @@ from claude_recovery.core.models import FileOperation, OpType
 from claude_recovery.core.reconstructor import reconstruct_file_at
 
 # Nord-inspired diff color palette (soft, readable on dark backgrounds)
-_STYLE_ADDED = "#a3be8c"       # Muted sage green (nord14)
-_STYLE_REMOVED = "#bf616a"     # Muted soft red (nord11)
-_STYLE_HUNK = "#81a1c1"        # Frost blue (nord9)
+_STYLE_ADDED = "#a3be8c"  # Muted sage green (nord14)
+_STYLE_REMOVED = "#bf616a"  # Muted soft red (nord11)
+_STYLE_HUNK = "#81a1c1"  # Frost blue (nord9)
 _STYLE_FILE_HEADER = "bold #d8dee9"  # Snow storm (nord4)
 _STYLE_CONTEXT = "dim"
 
@@ -148,7 +148,9 @@ def format_read_range_view(
     if is_full_read:
         text.append("[Full file read]\n\n", style="dim italic")
     else:
-        text.append(f"[Lines {start + 1}–{end} of {total} read]\n\n", style="dim italic")
+        text.append(
+            f"[Lines {start + 1}–{end} of {total} read]\n\n", style="dim italic"
+        )
 
     for i, line in enumerate(lines):
         in_range = start <= i < end

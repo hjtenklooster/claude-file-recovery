@@ -51,8 +51,10 @@ def load_symlink_yaml(path: Path) -> list[SymlinkGroup]:
     groups = []
     for canonical, aliases in raw.items():
         if isinstance(aliases, list):
-            groups.append(SymlinkGroup(
-                canonical=str(canonical),
-                aliases=[str(a) for a in aliases],
-            ))
+            groups.append(
+                SymlinkGroup(
+                    canonical=str(canonical),
+                    aliases=[str(a) for a in aliases],
+                )
+            )
     return groups

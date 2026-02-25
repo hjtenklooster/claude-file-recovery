@@ -53,7 +53,9 @@ def match_path(
     if mode is SearchMode.GLOB:
         p, basename = path, path.rsplit("/", 1)[-1] if "/" in path else path
         if case_sensitive:
-            matched = fnmatch.fnmatchcase(p, pattern) or fnmatch.fnmatchcase(basename, pattern)
+            matched = fnmatch.fnmatchcase(p, pattern) or fnmatch.fnmatchcase(
+                basename, pattern
+            )
         else:
             matched = fnmatch.fnmatch(p.lower(), pattern.lower()) or fnmatch.fnmatch(
                 basename.lower(), pattern.lower()

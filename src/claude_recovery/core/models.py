@@ -28,9 +28,15 @@ class FileOperation:
     replace_all: bool = False  # For edit
     read_offset: int | None = None  # For read: starting line number (1-indexed)
     read_limit: int | None = None  # For read: number of lines to read
-    read_start_line: int | None = None  # For read: actual start line from toolUseResult.file
-    read_num_lines: int | None = None  # For read: actual line count from toolUseResult.file
-    read_total_lines: int | None = None  # For read: total file lines from toolUseResult.file
+    read_start_line: int | None = (
+        None  # For read: actual start line from toolUseResult.file
+    )
+    read_num_lines: int | None = (
+        None  # For read: actual line count from toolUseResult.file
+    )
+    read_total_lines: int | None = (
+        None  # For read: total file lines from toolUseResult.file
+    )
     # Error state — set when tool_result has is_error: true
     is_error: bool = False
     error_message: str | None = None
@@ -61,9 +67,17 @@ class RecoverableFile:
     def has_full_content(self) -> bool:
         """Whether full file recovery is possible (has a Write, full Read, or file-history, not just Edits/partial Reads)."""
         for op in self.operations:
-            if op.type in (OpType.WRITE_CREATE, OpType.WRITE_UPDATE, OpType.FILE_HISTORY):
+            if op.type in (
+                OpType.WRITE_CREATE,
+                OpType.WRITE_UPDATE,
+                OpType.FILE_HISTORY,
+            ):
                 return True
-            if op.type == OpType.READ and op.read_offset is None and op.read_limit is None:
+            if (
+                op.type == OpType.READ
+                and op.read_offset is None
+                and op.read_limit is None
+            ):
                 return True
         return False
 
@@ -74,7 +88,9 @@ class RecoverableFile:
         for op in self.operations:
             key = op.type.value.split("_")[0]  # write, edit, read, file
             counts[key] = counts.get(key, 0) + 1
-        return ", ".join(f"{v} {k}{'s' if v != 1 else ''}" for k, v in sorted(counts.items()))
+        return ", ".join(
+            f"{v} {k}{'s' if v != 1 else ''}" for k, v in sorted(counts.items())
+        )
 
 
 @dataclass

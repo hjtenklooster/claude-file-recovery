@@ -5,7 +5,9 @@ import bisect
 from claude_recovery.core.models import FileOperation, OpType, RecoverableFile
 
 
-def apply_edit(content: str, old_string: str, new_string: str, replace_all: bool = False) -> str:
+def apply_edit(
+    content: str, old_string: str, new_string: str, replace_all: bool = False
+) -> str:
     """Apply an Edit operation to file content.
 
     replace_all=False: replace first occurrence only (str.replace with count=1)
@@ -46,7 +48,9 @@ def splice_read(
     return "\n".join(lines)
 
 
-def reconstruct_file_at(operations: list[FileOperation], up_to_index: int) -> str | None:
+def reconstruct_file_at(
+    operations: list[FileOperation], up_to_index: int
+) -> str | None:
     """Reconstruct file content at a specific point in the operation timeline.
 
     Replays all operations from index 0 through up_to_index (inclusive).
@@ -64,7 +68,9 @@ def reconstruct_file_at(operations: list[FileOperation], up_to_index: int) -> st
             # Response metadata (read_start_line etc.) wins when available; otherwise fall
             # back to request params (read_offset / read_limit).
             if op.read_start_line is not None:
-                is_full = op.read_start_line == 1 and op.read_num_lines == op.read_total_lines
+                is_full = (
+                    op.read_start_line == 1 and op.read_num_lines == op.read_total_lines
+                )
             else:
                 is_full = op.read_offset is None and op.read_limit is None
             if is_full:
@@ -75,16 +81,22 @@ def reconstruct_file_at(operations: list[FileOperation], up_to_index: int) -> st
                 # Use response metadata when available; fall back to request offset.
                 start_line = op.read_start_line or op.read_offset
                 content = splice_read(
-                    None, op.content, start_line,
-                    op.read_num_lines, op.read_total_lines,
+                    None,
+                    op.content,
+                    start_line,
+                    op.read_num_lines,
+                    op.read_total_lines,
                 )
             else:
                 # Partial read — splice into existing content.
                 # Use response metadata when available; fall back to request offset.
                 start_line = op.read_start_line or op.read_offset
                 content = splice_read(
-                    content, op.content, start_line,
-                    op.read_num_lines, op.read_total_lines,
+                    content,
+                    op.content,
+                    start_line,
+                    op.read_num_lines,
+                    op.read_total_lines,
                 )
         elif op.type == OpType.FILE_HISTORY:
             if op.content is not None:
@@ -95,8 +107,14 @@ def reconstruct_file_at(operations: list[FileOperation], up_to_index: int) -> st
             if op.original_file is not None:
                 content = op.original_file
             # Apply the edit
-            if content is not None and op.old_string is not None and op.new_string is not None:
-                content = apply_edit(content, op.old_string, op.new_string, op.replace_all)
+            if (
+                content is not None
+                and op.old_string is not None
+                and op.new_string is not None
+            ):
+                content = apply_edit(
+                    content, op.old_string, op.new_string, op.replace_all
+                )
 
     return content
 

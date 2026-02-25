@@ -6,6 +6,7 @@ they appear in >= threshold fraction of files with Read ops. Content that
 was injected by Claude Code (e.g. <system-reminder> tags) appears as the
 same trailing block across many files and is detected this way.
 """
+
 from __future__ import annotations
 
 from collections import Counter
@@ -86,9 +87,7 @@ def detect_injected_content(
     min_files = int(files_with_reads * threshold)
     patterns: list[InjectedContentPattern] = []
 
-    for idx, (content, file_count) in enumerate(
-        trailing_file_count.most_common()
-    ):
+    for idx, (content, file_count) in enumerate(trailing_file_count.most_common()):
         if file_count < min_files:
             break
         patterns.append(

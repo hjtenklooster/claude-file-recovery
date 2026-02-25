@@ -37,7 +37,7 @@ class PathSuggester(Suggester):
                     if tilde_prefix:
                         home = str(Path.home())
                         if result.startswith(home):
-                            result = "~" + result[len(home):]
+                            result = "~" + result[len(home) :]
                     return result
         except OSError:
             pass
@@ -66,7 +66,10 @@ class OutputDirModal(ModalScreen[Path | None]):
                 id="modal_input",
                 suggester=PathSuggester(),
             )
-            yield Static("Enter to confirm · Escape to cancel · Tab/→ to accept suggestion", id="modal_hint")
+            yield Static(
+                "Enter to confirm · Escape to cancel · Tab/→ to accept suggestion",
+                id="modal_hint",
+            )
 
     def on_mount(self) -> None:
         inp = self.query_one("#modal_input", Input)

@@ -38,6 +38,8 @@ class FileRecoveryApp(App):
 
     def on_mount(self) -> None:
         from claude_recovery.tui.symlink_review_screen import SymlinkReviewScreen
+
         self.push_screen(SymlinkReviewScreen())
         from claude_recovery.tui.injection_review_screen import InjectionReviewScreen
+
         self.push_screen(InjectionReviewScreen())
