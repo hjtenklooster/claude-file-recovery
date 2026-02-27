@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import bisect
 
-from claude_recovery.core.models import FileOperation, OpType, RecoverableFile
+from claude_file_recovery.core.models import FileOperation, OpType, RecoverableFile
 
 
 def apply_edit(

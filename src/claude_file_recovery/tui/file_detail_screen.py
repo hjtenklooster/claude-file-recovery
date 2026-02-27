@@ -9,15 +9,15 @@ from textual.widgets.option_list import Option
 
 from pathlib import Path
 
-from claude_recovery.core.models import FileOperation, OpType, RecoverableFile
-from claude_recovery.core.reconstructor import reconstruct_file_at
-from claude_recovery.core.diff import (
+from claude_file_recovery.core.models import FileOperation, OpType, RecoverableFile
+from claude_file_recovery.core.reconstructor import reconstruct_file_at
+from claude_file_recovery.core.diff import (
     compute_before_after,
     format_diff_text,
     format_full_diff_text,
     format_read_range_view,
 )
-from claude_recovery.core.timestamps import utc_to_local
+from claude_file_recovery.core.timestamps import utc_to_local
 
 
 class FileDetailScreen(Screen):
@@ -283,7 +283,7 @@ class FileDetailScreen(Screen):
 
     def action_change_output(self) -> None:
         """Open modal to change the output directory."""
-        from claude_recovery.tui.output_dir_modal import OutputDirModal
+        from claude_file_recovery.tui.output_dir_modal import OutputDirModal
 
         self.app.push_screen(
             OutputDirModal(self.app.output_dir),

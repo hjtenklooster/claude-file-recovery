@@ -42,7 +42,7 @@ jobs:
         run: uv sync
 
       - name: Verify CLI entry point
-        run: uv run claude-recovery --help
+        run: uv run claude-file-recovery --help
 
       - name: Build package
         run: uv build

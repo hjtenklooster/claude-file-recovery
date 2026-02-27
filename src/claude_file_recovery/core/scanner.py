@@ -7,8 +7,8 @@ from pathlib import Path
 
 import orjson
 
-from claude_recovery.core.models import FileOperation, OpType, RecoverableFile
-from claude_recovery.core.reconstructor import apply_edit, splice_read
+from claude_file_recovery.core.models import FileOperation, OpType, RecoverableFile
+from claude_file_recovery.core.reconstructor import apply_edit, splice_read
 
 
 def discover_jsonl_files(backup_dir: Path) -> list[Path]:

@@ -8,13 +8,13 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from claude_recovery.core.filters import SearchMode, filter_files, filter_by_timestamp
-from claude_recovery.core.reconstructor import (
+from claude_file_recovery.core.filters import SearchMode, filter_files, filter_by_timestamp
+from claude_file_recovery.core.reconstructor import (
     reconstruct_at_timestamp,
     reconstruct_latest,
 )
-from claude_recovery.core.scanner import scan_all_sessions
-from claude_recovery.core.timestamps import (
+from claude_file_recovery.core.scanner import scan_all_sessions
+from claude_file_recovery.core.timestamps import (
     normalize_timestamp,
     format_local_confirmation,
     utc_to_local,
@@ -23,12 +23,12 @@ from claude_recovery.core.timestamps import (
 
 def _version_callback(value: bool) -> None:
     if value:
-        print(f"claude-recovery {version('claude-recovery')}")
+        print(f"claude-file-recovery {version('claude-file-recovery')}")
         raise typer.Exit()
 
 
 app = typer.Typer(
-    name="claude-recovery",
+    name="claude-file-recovery",
     help="Recover files created and modified by Claude Code from session transcripts.",
     invoke_without_command=True,
 )
@@ -113,7 +113,7 @@ def list_files(
 
     # Detect injected content (warn only, no stripping — list-files doesn't output content)
     if not no_injection_detection:
-        from claude_recovery.core.injection import detect_injected_content
+        from claude_file_recovery.core.injection import detect_injected_content
 
         patterns = detect_injected_content(files)
         if patterns:
@@ -244,7 +244,7 @@ def extract_files(
 
     # Detect and strip injected content
     if not no_injection_detection:
-        from claude_recovery.core.injection import (
+        from claude_file_recovery.core.injection import (
             detect_injected_content,
             strip_injected_content,
         )
@@ -261,7 +261,7 @@ def extract_files(
 
     # Apply symlink deduplication if YAML provided
     if symlink_file and symlink_file.exists():
-        from claude_recovery.core.symlinks import load_symlink_yaml, merge_file_index
+        from claude_file_recovery.core.symlinks import load_symlink_yaml, merge_file_index
 
         groups = load_symlink_yaml(symlink_file)
         if groups:
@@ -354,7 +354,7 @@ def identify_symlinks(
     ),
 ):
     """Detect symlinked file paths and write a YAML mapping file."""
-    from claude_recovery.core.symlinks import (
+    from claude_file_recovery.core.symlinks import (
         detect_fs_symlinks,
         save_symlink_yaml,
     )
@@ -510,7 +510,7 @@ def _launch_tui_impl(
     # Detect injected content
     injection_patterns = []
     if not no_injection_detection:
-        from claude_recovery.core.injection import detect_injected_content
+        from claude_file_recovery.core.injection import detect_injected_content
 
         injection_patterns = detect_injected_content(file_index)
         if injection_patterns:
@@ -518,7 +518,7 @@ def _launch_tui_impl(
             console.print(f"Detected injected content in {total_ops} Read operations")
 
     # Detect or load symlink mappings
-    from claude_recovery.core.symlinks import (
+    from claude_file_recovery.core.symlinks import (
         detect_fs_symlinks,
         load_symlink_yaml,
     )
@@ -539,7 +539,7 @@ def _launch_tui_impl(
         if symlink_groups:
             console.print(f"Detected {len(symlink_groups)} symlink groups")
 
-    from claude_recovery.tui.app import FileRecoveryApp
+    from claude_file_recovery.tui.app import FileRecoveryApp
 
     tui_app = FileRecoveryApp(
         claude_dir=claude_dir,
@@ -557,11 +557,11 @@ def _launch_tui_impl(
 
     parent_cmd = os.environ.get("_", "")
     if "uv" in parent_cmd:
-        cmd = "uv run claude-recovery"
-    elif sys.argv[0].endswith("claude-recovery"):
-        cmd = "claude-recovery"
+        cmd = "uv run claude-file-recovery"
+    elif sys.argv[0].endswith("claude-file-recovery"):
+        cmd = "claude-file-recovery"
     else:
-        cmd = "python -m claude_recovery"
+        cmd = "python -m claude_file_recovery"
     parts = [cmd]
     parts.append(f"--claude-dir {tui_app.claude_dir}")
     parts.append(f"--output {tui_app.output_dir}")

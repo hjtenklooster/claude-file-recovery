@@ -74,7 +74,7 @@ class InjectionReviewScreen(Screen):
         app = self.app  # type: FileRecoveryApp
 
         if app.injection_patterns:
-            from claude_recovery.core.injection import strip_injected_content
+            from claude_file_recovery.core.injection import strip_injected_content
 
             strip_injected_content(app.raw_file_index, app.injection_patterns)
             # Also strip from merged index if it exists
@@ -103,7 +103,7 @@ class InjectionReviewScreen(Screen):
         # Pop to reveal it. If re-opened from FileListScreen, pop back to it.
         screen_stack = self.app.screen_stack
         if len(screen_stack) >= 2:
-            from claude_recovery.tui.file_list_screen import FileListScreen
+            from claude_file_recovery.tui.file_list_screen import FileListScreen
 
             if isinstance(screen_stack[-2], FileListScreen):
                 self.app.pop_screen()

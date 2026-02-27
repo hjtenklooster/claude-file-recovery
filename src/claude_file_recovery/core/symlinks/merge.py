@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from claude_recovery.core.models import RecoverableFile
-from claude_recovery.core.symlinks.models import SymlinkGroup
+from claude_file_recovery.core.models import RecoverableFile
+from claude_file_recovery.core.symlinks.models import SymlinkGroup
 
 
 def merge_file_index(

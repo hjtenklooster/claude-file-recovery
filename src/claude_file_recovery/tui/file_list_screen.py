@@ -12,15 +12,15 @@ from textual.timer import Timer
 from textual.widgets import Footer, Input, Label, SelectionList, Static
 from textual.widgets.selection_list import Selection
 
-from claude_recovery.core.filters import (
+from claude_file_recovery.core.filters import (
     SearchMode,
     match_path,
     validate_regex,
     smart_case_sensitive,
 )
-from claude_recovery.core.timestamps import utc_to_local
-from claude_recovery.core.models import RecoverableFile
-from claude_recovery.core.reconstructor import reconstruct_latest
+from claude_file_recovery.core.timestamps import utc_to_local
+from claude_file_recovery.core.models import RecoverableFile
+from claude_file_recovery.core.reconstructor import reconstruct_latest
 
 
 class FileSelectionList(SelectionList):
@@ -311,7 +311,7 @@ class FileListScreen(Screen):
         path = self._filtered_paths[idx]
         rf = self.app.file_index.get(path)
         if rf:
-            from claude_recovery.tui.file_detail_screen import FileDetailScreen
+            from claude_file_recovery.tui.file_detail_screen import FileDetailScreen
 
             self.app.push_screen(FileDetailScreen(rf))
 
@@ -346,18 +346,18 @@ class FileListScreen(Screen):
             return
 
         # No merged index yet — run detection and open the review screen
-        from claude_recovery.core.symlinks import detect_fs_symlinks
+        from claude_file_recovery.core.symlinks import detect_fs_symlinks
 
         file_paths = list(app.raw_file_index.keys())
         groups = detect_fs_symlinks(file_paths)
         app.symlink_groups = groups or []
-        from claude_recovery.tui.symlink_review_screen import SymlinkReviewScreen
+        from claude_file_recovery.tui.symlink_review_screen import SymlinkReviewScreen
 
         self.app.push_screen(SymlinkReviewScreen())
 
     def action_open_symlinks(self) -> None:
         """Open the symlink review screen."""
-        from claude_recovery.tui.symlink_review_screen import SymlinkReviewScreen
+        from claude_file_recovery.tui.symlink_review_screen import SymlinkReviewScreen
 
         self.app.push_screen(SymlinkReviewScreen())
 
@@ -372,7 +372,7 @@ class FileListScreen(Screen):
 
     def action_change_output(self) -> None:
         """Open modal to change the output directory."""
-        from claude_recovery.tui.output_dir_modal import OutputDirModal
+        from claude_file_recovery.tui.output_dir_modal import OutputDirModal
 
         self.app.push_screen(
             OutputDirModal(self.app.output_dir),

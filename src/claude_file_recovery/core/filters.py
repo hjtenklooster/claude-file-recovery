@@ -8,7 +8,7 @@ import re
 
 from textual.fuzzy import Matcher
 
-from claude_recovery.core.models import RecoverableFile
+from claude_file_recovery.core.models import RecoverableFile
 
 
 class SearchMode(str, enum.Enum):

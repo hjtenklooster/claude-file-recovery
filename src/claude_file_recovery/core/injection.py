@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from collections import Counter
 
-from claude_recovery.core.models import (
+from claude_file_recovery.core.models import (
     InjectedContentPattern,
     OpType,
     RecoverableFile,

@@ -1,14 +1,14 @@
-# claude-recovery
+# claude-file-recovery
 
-[![PyPI version](https://img.shields.io/pypi/v/claude-recovery.svg)](https://pypi.org/project/claude-recovery/)
-[![Python versions](https://img.shields.io/pypi/pyversions/claude-recovery.svg)](https://pypi.org/project/claude-recovery/)
+[![PyPI version](https://img.shields.io/pypi/v/claude-file-recovery.svg)](https://pypi.org/project/claude-file-recovery/)
+[![Python versions](https://img.shields.io/pypi/pyversions/claude-file-recovery.svg)](https://pypi.org/project/claude-file-recovery/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Recover files created and modified by [Claude Code](https://docs.anthropic.com/en/docs/claude-code) from its JSONL session transcripts — even if you lost track of them across sessions.
 
 Claude Code stores a full log of every tool call in `~/.claude/projects/`. This tool parses those transcripts, replays Write, Edit, and Read operations in order, and reconstructs the files so you can browse, search, and extract them.
 
-![claude-recovery TUI demo](https://raw.githubusercontent.com/hjtenklooster/claude-recovery/main/demo/demo.gif)
+![claude-file-recovery TUI demo](https://raw.githubusercontent.com/hjtenklooster/claude-file-recovery/main/demo/demo.gif)
 
 ## Features
 
@@ -24,13 +24,13 @@ Claude Code stores a full log of every tool call in `~/.claude/projects/`. This 
 
 ```bash
 # Recommended
-uv tool install claude-recovery
+uv tool install claude-file-recovery
 
 # Or with pipx
-pipx install claude-recovery
+pipx install claude-file-recovery
 
 # Or with pip
-pip install claude-recovery
+pip install claude-file-recovery
 ```
 
 Requires Python 3.10+.
@@ -39,25 +39,25 @@ Requires Python 3.10+.
 
 ```bash
 # Launch the interactive TUI (default command)
-claude-recovery
+claude-file-recovery
 
 # List all recoverable files
-claude-recovery list-files
+claude-file-recovery list-files
 
 # Filter by pattern
-claude-recovery list-files --filter '*.py'
+claude-file-recovery list-files --filter '*.py'
 
 # Export as CSV
-claude-recovery list-files --filter '*.ts' --csv
+claude-file-recovery list-files --filter '*.ts' --csv
 
 # Extract files to disk
-claude-recovery extract-files --output ./recovered --filter '*.py'
+claude-file-recovery extract-files --output ./recovered --filter '*.py'
 
 # Recover files as they were before a certain time
-claude-recovery list-files --before '2025-02-20 14:00'
+claude-file-recovery list-files --before '2025-02-20 14:00'
 
 # Point to a different Claude data directory
-claude-recovery --claude-dir /path/to/claude-backup
+claude-file-recovery --claude-dir /path/to/claude-backup
 ```
 
 ## How It Works

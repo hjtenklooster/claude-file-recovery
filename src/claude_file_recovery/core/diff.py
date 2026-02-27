@@ -4,8 +4,8 @@ import difflib
 
 from rich.text import Text
 
-from claude_recovery.core.models import FileOperation, OpType
-from claude_recovery.core.reconstructor import reconstruct_file_at
+from claude_file_recovery.core.models import FileOperation, OpType
+from claude_file_recovery.core.reconstructor import reconstruct_file_at
 
 # Nord-inspired diff color palette (soft, readable on dark backgrounds)
 _STYLE_ADDED = "#a3be8c"  # Muted sage green (nord14)

@@ -8,8 +8,8 @@ from textual.widgets.option_list import Option
 
 from pathlib import Path
 
-from claude_recovery.core.symlinks.models import save_symlink_yaml
-from claude_recovery.core.symlinks.merge import merge_file_index
+from claude_file_recovery.core.symlinks.models import save_symlink_yaml
+from claude_file_recovery.core.symlinks.merge import merge_file_index
 
 
 class SymlinkReviewScreen(Screen):
@@ -62,7 +62,7 @@ class SymlinkReviewScreen(Screen):
                 "\n"
                 " Review the mappings below. Use d to remove incorrect entries, Enter to confirm.\n"
                 f" On confirm, mappings are saved to {yaml_path} (editable by hand).\n"
-                f" Reuse next time with: claude-recovery --symlink-file {yaml_path}\n"
+                f" Reuse next time with: claude-file-recovery --symlink-file {yaml_path}\n"
                 " Press S to disable symlink detection and skip."
             )
         else:
@@ -74,7 +74,7 @@ class SymlinkReviewScreen(Screen):
                 " This merges edits made through different paths into a single file.\n"
                 "\n"
                 f" Press e to generate an example YAML file at {yaml_path}\n"
-                f" Then edit it and reuse with: claude-recovery --symlink-file {yaml_path}\n"
+                f" Then edit it and reuse with: claude-file-recovery --symlink-file {yaml_path}\n"
                 " Press S to go back to the file list."
             )
         self._rebuild_list()
@@ -140,7 +140,7 @@ class SymlinkReviewScreen(Screen):
         yaml_path = self._yaml_path()
 
         example = (
-            "# Symlink mappings for claude-recovery\n"
+            "# Symlink mappings for claude-file-recovery\n"
             "# Each key is the canonical (real) path.\n"
             "# Values are alias paths whose edits should be merged into the canonical.\n"
             "#\n"
@@ -149,7 +149,7 @@ class SymlinkReviewScreen(Screen):
             "#   - /Users/you/worktrees/feature/src/project\n"
             "#   - /tmp/project\n"
             "#\n"
-            "# Reuse with: claude-recovery --symlink-file {path}\n".format(
+            "# Reuse with: claude-file-recovery --symlink-file {path}\n".format(
                 path=yaml_path
             )
         )
@@ -168,12 +168,12 @@ class SymlinkReviewScreen(Screen):
 
         screen_stack = self.app.screen_stack
         if len(screen_stack) >= 2:
-            from claude_recovery.tui.file_list_screen import FileListScreen
+            from claude_file_recovery.tui.file_list_screen import FileListScreen
 
             if isinstance(screen_stack[-2], FileListScreen):
                 self.app.pop_screen()
                 return
-        from claude_recovery.tui.file_list_screen import FileListScreen
+        from claude_file_recovery.tui.file_list_screen import FileListScreen
 
         self.app.push_screen(FileListScreen())
 
@@ -203,12 +203,12 @@ class SymlinkReviewScreen(Screen):
         # Otherwise (initial mount), push a new FileListScreen
         screen_stack = self.app.screen_stack
         if len(screen_stack) >= 2:
-            from claude_recovery.tui.file_list_screen import FileListScreen
+            from claude_file_recovery.tui.file_list_screen import FileListScreen
 
             if isinstance(screen_stack[-2], FileListScreen):
                 self.app.pop_screen()
                 return
-        from claude_recovery.tui.file_list_screen import FileListScreen
+        from claude_file_recovery.tui.file_list_screen import FileListScreen
 
         self.app.push_screen(FileListScreen())
 

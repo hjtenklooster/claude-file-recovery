@@ -12,8 +12,8 @@ wheels = [
 ]
 
 [[package]]
-name = "claude-recovery"
-version = "0.1.0"
+name = "claude-file-recovery"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "orjson" },

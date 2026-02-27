@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from claude_recovery.core.symlinks.models import SymlinkGroup
+from claude_file_recovery.core.symlinks.models import SymlinkGroup
 
 
 def find_symlinks_in_path(filepath: str, cache: dict[str, str | None]) -> str | None:

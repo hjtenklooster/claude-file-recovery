@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate realistic demo data for the claude-recovery TUI.
+"""Generate realistic demo data for the claude-file-recovery TUI.
 
 Creates JSONL session files that the scanner can parse, producing 15-25
 recoverable files that look like a real Claude Code session building a web app.
@@ -11,8 +11,6 @@ Usage:
 from __future__ import annotations
 
 import json
-import os
-import uuid
 from pathlib import Path
 
 DEMO_DIR = Path(__file__).parent / "demo-claude-data" / "projects"
@@ -46,7 +44,9 @@ def progress_line(ts: str, session_id: str) -> dict:
     }
 
 
-def assistant_write(ts: str, session_id: str, file_path: str, content: str) -> tuple[dict, str, str]:
+def assistant_write(
+    ts: str, session_id: str, file_path: str, content: str
+) -> tuple[dict, str, str]:
     """Return (entry, tool_use_id, assistant_uuid)."""
     tid = _tool_id()
     uid = _uuid_val()
@@ -72,7 +72,12 @@ def assistant_write(ts: str, session_id: str, file_path: str, content: str) -> t
 
 
 def user_write_create(
-    ts: str, session_id: str, file_path: str, content: str, tool_use_id: str, parent_uuid: str
+    ts: str,
+    session_id: str,
+    file_path: str,
+    content: str,
+    tool_use_id: str,
+    parent_uuid: str,
 ) -> dict:
     uid = _uuid_val()
     return {
@@ -315,11 +320,15 @@ def write_update(lines: list, ts: str, sid: str, fp: str, content: str, original
     lines.append(user_write_update(_bump_ts(ts), sid, fp, content, original, tid, uid))
 
 
-def edit(lines: list, ts: str, sid: str, fp: str, old: str, new: str, original_file: str):
+def edit(
+    lines: list, ts: str, sid: str, fp: str, old: str, new: str, original_file: str
+):
     """Convenience: emit assistant edit + user edit result."""
     a, tid, uid = assistant_edit(ts, sid, fp, old, new)
     lines.append(a)
-    lines.append(user_edit_result(_bump_ts(ts), sid, fp, old, new, original_file, tid, uid))
+    lines.append(
+        user_edit_result(_bump_ts(ts), sid, fp, old, new, original_file, tid, uid)
+    )
 
 
 def read(lines: list, ts: str, sid: str, fp: str, content: str):
@@ -335,7 +344,7 @@ def read(lines: list, ts: str, sid: str, fp: str, content: str):
 
 BASE = "/Users/demo/webapp"
 
-APP_PY_V1 = '''from flask import Flask, jsonify
+APP_PY_V1 = """from flask import Flask, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -356,9 +365,9 @@ def list_users():
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
-'''
+"""
 
-APP_PY_V2 = '''from flask import Flask, jsonify, request
+APP_PY_V2 = """from flask import Flask, jsonify, request
 from flask_cors import CORS
 from config import Config
 
@@ -391,9 +400,9 @@ def create_user():
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
-'''
+"""
 
-MODELS_PY_V1 = '''from flask_sqlalchemy import SQLAlchemy
+MODELS_PY_V1 = """from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
@@ -413,9 +422,9 @@ class User(db.Model):
             "email": self.email,
             "created_at": self.created_at.isoformat(),
         }
-'''
+"""
 
-MODELS_PY_V2 = '''from flask_sqlalchemy import SQLAlchemy
+MODELS_PY_V2 = """from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 
 db = SQLAlchemy()
@@ -445,7 +454,7 @@ class User(db.Model):
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat(),
         }
-'''
+"""
 
 UTILS_PY = '''import re
 from functools import wraps
@@ -479,7 +488,7 @@ def paginate(query, page: int = 1, per_page: int = 20):
     }
 '''
 
-CONFIG_PY = '''import os
+CONFIG_PY = """import os
 
 
 class Config:
@@ -490,9 +499,9 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JWT_EXPIRATION_HOURS = 24
     CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
-'''
+"""
 
-APP_TSX_V1 = '''import React from "react";
+APP_TSX_V1 = """import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./hooks/useAuth";
 import { UserList } from "./components/UserList";
@@ -518,9 +527,9 @@ export default function App() {
     </AuthProvider>
   );
 }
-'''
+"""
 
-APP_TSX_V2 = '''import React from "react";
+APP_TSX_V2 = """import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 import { UserList } from "./components/UserList";
@@ -558,9 +567,9 @@ export default function App() {
     </AuthProvider>
   );
 }
-'''
+"""
 
-API_TS = '''const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+API_TS = """const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 interface ApiResponse<T> {
   data: T;
@@ -617,9 +626,9 @@ export interface User {
   is_active: boolean;
   created_at: string;
 }
-'''
+"""
 
-USE_AUTH_TS = '''import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+USE_AUTH_TS = """import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { api, User } from "../api";
 
 interface AuthContextType {
@@ -674,9 +683,9 @@ export function useAuth(): AuthContextType {
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
 }
-'''
+"""
 
-DOCKER_COMPOSE_V1 = '''version: "3.8"
+DOCKER_COMPOSE_V1 = """version: "3.8"
 
 services:
   db:
@@ -709,9 +718,9 @@ services:
 
 volumes:
   pgdata:
-'''
+"""
 
-DOCKER_COMPOSE_V2 = '''version: "3.8"
+DOCKER_COMPOSE_V2 = """version: "3.8"
 
 services:
   db:
@@ -760,9 +769,9 @@ services:
 
 volumes:
   pgdata:
-'''
+"""
 
-NGINX_CONF = '''upstream api_backend {
+NGINX_CONF = """upstream api_backend {
     server api:5000;
 }
 
@@ -791,9 +800,9 @@ server {
         proxy_set_header Connection "upgrade";
     }
 }
-'''
+"""
 
-ENV_EXAMPLE = '''# Backend
+ENV_EXAMPLE = """# Backend
 SECRET_KEY=change-me-in-production
 DATABASE_URL=postgresql://webapp:secret@localhost:5432/webapp
 REDIS_URL=redis://localhost:6379/0
@@ -806,9 +815,9 @@ VITE_API_URL=http://localhost:5000/api
 POSTGRES_DB=webapp
 POSTGRES_USER=webapp
 POSTGRES_PASSWORD=secret
-'''
+"""
 
-README_MD = '''# WebApp
+README_MD = """# WebApp
 
 A full-stack web application with Flask backend and React frontend.
 
@@ -844,9 +853,9 @@ cd frontend && npm install && npm run dev
 ## Development
 
 Copy `.env.example` to `.env` and update values for your environment.
-'''
+"""
 
-ARCHITECTURE_MD = '''# Architecture
+ARCHITECTURE_MD = """# Architecture
 
 ## System Overview
 
@@ -897,9 +906,9 @@ webapp/
 ├── nginx.conf
 └── deploy.sh
 ```
-'''
+"""
 
-DEPLOY_SH = '''#!/bin/bash
+DEPLOY_SH = """#!/bin/bash
 set -euo pipefail
 
 # Deploy script for webapp
@@ -931,9 +940,9 @@ done
 
 echo "ERROR: Health check failed after 30 seconds"
 exit 1
-'''
+"""
 
-STYLES_CSS = ''':root {
+STYLES_CSS = """:root {
   --color-primary: #3b82f6;
   --color-primary-dark: #2563eb;
   --color-bg: #0f172a;
@@ -1032,9 +1041,9 @@ button {
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
-'''
+"""
 
-SQL_MIGRATION = '''-- Migration 001: Initial schema
+SQL_MIGRATION = """-- Migration 001: Initial schema
 -- Created: 2026-02-20
 
 BEGIN;
@@ -1061,7 +1070,7 @@ VALUES
 ON CONFLICT (email) DO NOTHING;
 
 COMMIT;
-'''
+"""
 
 AUTH_PY = '''from functools import wraps
 from flask import request, jsonify
@@ -1109,7 +1118,7 @@ def require_auth(f):
     return decorated
 '''
 
-REQUIREMENTS_TXT = '''flask==3.0.2
+REQUIREMENTS_TXT = """flask==3.0.2
 flask-cors==4.0.0
 flask-sqlalchemy==3.1.1
 psycopg2-binary==2.9.9
@@ -1117,9 +1126,9 @@ pyjwt==2.8.0
 redis==5.0.1
 werkzeug==3.0.1
 gunicorn==21.1.0
-'''
+"""
 
-PACKAGE_JSON = '''{
+PACKAGE_JSON = """{
   "name": "webapp-frontend",
   "private": true,
   "version": "0.1.0",
@@ -1142,9 +1151,9 @@ PACKAGE_JSON = '''{
     "vite": "^5.1.0"
   }
 }
-'''
+"""
 
-TSCONFIG_JSON = '''{
+TSCONFIG_JSON = """{
   "compilerOptions": {
     "target": "ES2020",
     "useDefineForClassFields": true,
@@ -1165,9 +1174,9 @@ TSCONFIG_JSON = '''{
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
-'''
+"""
 
-GITIGNORE = '''# Python
+GITIGNORE = """# Python
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -1192,12 +1201,13 @@ pgdata/
 
 # OS
 .DS_Store
-'''
+"""
 
 
 # --------------------------------------------------------------------------- #
 # Session builders
 # --------------------------------------------------------------------------- #
+
 
 def build_session_1() -> tuple[str, str, list[dict]]:
     """Session 1: Initial project setup — backend + config files.
@@ -1217,7 +1227,9 @@ def build_session_1() -> tuple[str, str, list[dict]]:
     lines.append(progress_line("2026-02-20T10:01:00.000Z", sid))
 
     # --- 10:02 — Create models.py ---
-    write_create(lines, "2026-02-20T10:02:00.000Z", sid, f"{BASE}/models.py", MODELS_PY_V1)
+    write_create(
+        lines, "2026-02-20T10:02:00.000Z", sid, f"{BASE}/models.py", MODELS_PY_V1
+    )
 
     # --- 10:05 — Create config.py ---
     lines.append(progress_line("2026-02-20T10:04:30.000Z", sid))
@@ -1229,10 +1241,18 @@ def build_session_1() -> tuple[str, str, list[dict]]:
     lines.append(progress_line("2026-02-20T10:09:00.000Z", sid))
 
     # --- 10:10 — Create docker-compose.yml ---
-    write_create(lines, "2026-02-20T10:10:00.000Z", sid, f"{BASE}/docker-compose.yml", DOCKER_COMPOSE_V1)
+    write_create(
+        lines,
+        "2026-02-20T10:10:00.000Z",
+        sid,
+        f"{BASE}/docker-compose.yml",
+        DOCKER_COMPOSE_V1,
+    )
 
     # --- 10:15 — Create .env.example ---
-    write_create(lines, "2026-02-20T10:15:00.000Z", sid, f"{BASE}/.env.example", ENV_EXAMPLE)
+    write_create(
+        lines, "2026-02-20T10:15:00.000Z", sid, f"{BASE}/.env.example", ENV_EXAMPLE
+    )
 
     # --- 10:20 — Create README.md ---
     lines.append(progress_line("2026-02-20T10:19:00.000Z", sid))
@@ -1242,11 +1262,19 @@ def build_session_1() -> tuple[str, str, list[dict]]:
     write_create(lines, "2026-02-20T10:25:00.000Z", sid, f"{BASE}/deploy.sh", DEPLOY_SH)
 
     # --- 10:30 — Create migrations/001_init.sql ---
-    write_create(lines, "2026-02-20T10:30:00.000Z", sid, f"{BASE}/migrations/001_init.sql", SQL_MIGRATION)
+    write_create(
+        lines,
+        "2026-02-20T10:30:00.000Z",
+        sid,
+        f"{BASE}/migrations/001_init.sql",
+        SQL_MIGRATION,
+    )
 
     # --- 10:35 — Edit app.py: add version to health endpoint ---
     edit(
-        lines, "2026-02-20T10:35:00.000Z", sid,
+        lines,
+        "2026-02-20T10:35:00.000Z",
+        sid,
         f"{BASE}/app.py",
         'return jsonify({"status": "ok"})',
         'return jsonify({"status": "ok", "version": "0.1.0"})',
@@ -1257,10 +1285,12 @@ def build_session_1() -> tuple[str, str, list[dict]]:
 
     # --- 10:40 — Edit models.py: add is_active field ---
     edit(
-        lines, "2026-02-20T10:40:00.000Z", sid,
+        lines,
+        "2026-02-20T10:40:00.000Z",
+        sid,
         f"{BASE}/models.py",
-        '    created_at = db.Column(db.DateTime, server_default=db.func.now())',
-        '    is_active = db.Column(db.Boolean, default=True)\n    created_at = db.Column(db.DateTime, server_default=db.func.now())',
+        "    created_at = db.Column(db.DateTime, server_default=db.func.now())",
+        "    is_active = db.Column(db.Boolean, default=True)\n    created_at = db.Column(db.DateTime, server_default=db.func.now())",
         MODELS_PY_V1,
     )
 
@@ -1293,43 +1323,88 @@ def build_session_2() -> tuple[str, str, list[dict]]:
     write_create(lines, "2026-02-20T14:05:00.000Z", sid, f"{BASE}/auth.py", AUTH_PY)
 
     # --- 14:10 — Rewrite app.py with auth + create_user route ---
-    write_update(lines, "2026-02-20T14:10:00.000Z", sid, f"{BASE}/app.py", APP_PY_V2, APP_PY_V1)
+    write_update(
+        lines, "2026-02-20T14:10:00.000Z", sid, f"{BASE}/app.py", APP_PY_V2, APP_PY_V1
+    )
 
     # --- 14:15 — Rewrite models.py with password support ---
-    write_update(lines, "2026-02-20T14:15:00.000Z", sid, f"{BASE}/models.py", MODELS_PY_V2, MODELS_PY_V1)
+    write_update(
+        lines,
+        "2026-02-20T14:15:00.000Z",
+        sid,
+        f"{BASE}/models.py",
+        MODELS_PY_V2,
+        MODELS_PY_V1,
+    )
 
     lines.append(progress_line("2026-02-20T14:16:00.000Z", sid))
 
     # --- 14:20 — Create App.tsx ---
-    write_create(lines, "2026-02-20T14:20:00.000Z", sid, f"{BASE}/frontend/src/App.tsx", APP_TSX_V1)
+    write_create(
+        lines,
+        "2026-02-20T14:20:00.000Z",
+        sid,
+        f"{BASE}/frontend/src/App.tsx",
+        APP_TSX_V1,
+    )
 
     # --- 14:25 — Create api.ts ---
-    write_create(lines, "2026-02-20T14:25:00.000Z", sid, f"{BASE}/frontend/src/api.ts", API_TS)
+    write_create(
+        lines, "2026-02-20T14:25:00.000Z", sid, f"{BASE}/frontend/src/api.ts", API_TS
+    )
 
     # --- 14:30 — Create useAuth.ts ---
-    write_create(lines, "2026-02-20T14:30:00.000Z", sid, f"{BASE}/frontend/src/hooks/useAuth.ts", USE_AUTH_TS)
+    write_create(
+        lines,
+        "2026-02-20T14:30:00.000Z",
+        sid,
+        f"{BASE}/frontend/src/hooks/useAuth.ts",
+        USE_AUTH_TS,
+    )
 
     # --- 14:35 — Create styles.css ---
-    write_create(lines, "2026-02-20T14:35:00.000Z", sid, f"{BASE}/frontend/src/styles.css", STYLES_CSS)
+    write_create(
+        lines,
+        "2026-02-20T14:35:00.000Z",
+        sid,
+        f"{BASE}/frontend/src/styles.css",
+        STYLES_CSS,
+    )
 
     lines.append(progress_line("2026-02-20T14:36:00.000Z", sid))
 
     # --- 14:40 — Create nginx.conf ---
-    write_create(lines, "2026-02-20T14:40:00.000Z", sid, f"{BASE}/nginx.conf", NGINX_CONF)
+    write_create(
+        lines, "2026-02-20T14:40:00.000Z", sid, f"{BASE}/nginx.conf", NGINX_CONF
+    )
 
     # --- 14:45 — Create ARCHITECTURE.md ---
-    write_create(lines, "2026-02-20T14:45:00.000Z", sid, f"{BASE}/ARCHITECTURE.md", ARCHITECTURE_MD)
+    write_create(
+        lines,
+        "2026-02-20T14:45:00.000Z",
+        sid,
+        f"{BASE}/ARCHITECTURE.md",
+        ARCHITECTURE_MD,
+    )
 
     # --- 14:50 — Edit docker-compose: add redis + healthcheck ---
     write_update(
-        lines, "2026-02-20T14:50:00.000Z", sid,
-        f"{BASE}/docker-compose.yml", DOCKER_COMPOSE_V2, DOCKER_COMPOSE_V1,
+        lines,
+        "2026-02-20T14:50:00.000Z",
+        sid,
+        f"{BASE}/docker-compose.yml",
+        DOCKER_COMPOSE_V2,
+        DOCKER_COMPOSE_V1,
     )
 
     # --- 14:55 — Edit App.tsx: add routing + protected routes ---
     write_update(
-        lines, "2026-02-20T14:55:00.000Z", sid,
-        f"{BASE}/frontend/src/App.tsx", APP_TSX_V2, APP_TSX_V1,
+        lines,
+        "2026-02-20T14:55:00.000Z",
+        sid,
+        f"{BASE}/frontend/src/App.tsx",
+        APP_TSX_V2,
+        APP_TSX_V1,
     )
 
     return slug, sid, lines
@@ -1349,26 +1424,54 @@ def build_session_3() -> tuple[str, str, list[dict]]:
 
     # --- 16:00 — Create package.json ---
     lines.append(progress_line("2026-02-20T16:00:00.000Z", sid))
-    write_create(lines, "2026-02-20T16:00:05.000Z", sid, f"{BASE}/frontend/package.json", PACKAGE_JSON)
+    write_create(
+        lines,
+        "2026-02-20T16:00:05.000Z",
+        sid,
+        f"{BASE}/frontend/package.json",
+        PACKAGE_JSON,
+    )
 
     # --- 16:05 — Create tsconfig.json ---
-    write_create(lines, "2026-02-20T16:05:00.000Z", sid, f"{BASE}/frontend/tsconfig.json", TSCONFIG_JSON)
+    write_create(
+        lines,
+        "2026-02-20T16:05:00.000Z",
+        sid,
+        f"{BASE}/frontend/tsconfig.json",
+        TSCONFIG_JSON,
+    )
 
     # --- 16:10 — Create .gitignore ---
-    write_create(lines, "2026-02-20T16:10:00.000Z", sid, f"{BASE}/.gitignore", GITIGNORE)
+    write_create(
+        lines, "2026-02-20T16:10:00.000Z", sid, f"{BASE}/.gitignore", GITIGNORE
+    )
 
     lines.append(progress_line("2026-02-20T16:11:00.000Z", sid))
 
     # --- 16:15 — Create requirements.txt ---
-    write_create(lines, "2026-02-20T16:15:00.000Z", sid, f"{BASE}/backend/requirements.txt", REQUIREMENTS_TXT)
+    write_create(
+        lines,
+        "2026-02-20T16:15:00.000Z",
+        sid,
+        f"{BASE}/backend/requirements.txt",
+        REQUIREMENTS_TXT,
+    )
 
     # --- 16:20 — Read App.tsx to review ---
-    read(lines, "2026-02-20T16:20:00.000Z", sid, f"{BASE}/frontend/src/App.tsx", APP_TSX_V2)
+    read(
+        lines,
+        "2026-02-20T16:20:00.000Z",
+        sid,
+        f"{BASE}/frontend/src/App.tsx",
+        APP_TSX_V2,
+    )
 
     # --- 16:25 — Edit .gitignore: add more patterns ---
     current_gitignore = GITIGNORE
     edit(
-        lines, "2026-02-20T16:25:00.000Z", sid,
+        lines,
+        "2026-02-20T16:25:00.000Z",
+        sid,
         f"{BASE}/.gitignore",
         "# OS\n.DS_Store",
         "# OS\n.DS_Store\nThumbs.db\n\n# Logs\n*.log\nnpm-debug.log*",
@@ -1381,6 +1484,7 @@ def build_session_3() -> tuple[str, str, list[dict]]:
 # --------------------------------------------------------------------------- #
 # Main
 # --------------------------------------------------------------------------- #
+
 
 def write_session(slug: str, session_id: str, entries: list[dict]) -> None:
     """Write a list of JSONL entries to the appropriate file."""
@@ -1398,6 +1502,7 @@ def write_session(slug: str, session_id: str, entries: list[dict]) -> None:
 def main():
     # Clean existing demo data
     import shutil
+
     if DEMO_DIR.exists():
         shutil.rmtree(DEMO_DIR)
 

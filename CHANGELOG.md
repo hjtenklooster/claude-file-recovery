@@ -46,8 +46,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - TUI injection review screen with confirm/skip before file browsing
 - `--no-injection-detection` flag to disable injected content filtering
 
-[Unreleased]: https://github.com/hjtenklooster/claude-recovery/compare/v0.1.3...HEAD
-[0.1.3]: https://github.com/hjtenklooster/claude-recovery/releases/tag/v0.1.3
-[0.1.2]: https://github.com/hjtenklooster/claude-recovery/releases/tag/v0.1.2
-[0.1.1]: https://github.com/hjtenklooster/claude-recovery/releases/tag/v0.1.1
-[0.1.0]: https://github.com/hjtenklooster/claude-recovery/releases/tag/v0.1.0
+[Unreleased]: https://github.com/hjtenklooster/claude-file-recovery/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/hjtenklooster/claude-file-recovery/releases/tag/v0.1.3
+[0.1.2]: https://github.com/hjtenklooster/claude-file-recovery/releases/tag/v0.1.2
+[0.1.1]: https://github.com/hjtenklooster/claude-file-recovery/releases/tag/v0.1.1
+[0.1.0]: https://github.com/hjtenklooster/claude-file-recovery/releases/tag/v0.1.0

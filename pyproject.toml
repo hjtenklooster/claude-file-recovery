@@ -3,8 +3,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "claude-recovery"
-version = "0.1.3"
+name = "claude-file-recovery"
+version = "0.2.0"
 description = "Recover files created and modified by Claude Code from session transcripts"
 readme = "README.md"
 license = "MIT"
@@ -36,13 +36,13 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/hjtenklooster/claude-recovery"
-Repository = "https://github.com/hjtenklooster/claude-recovery"
-Issues = "https://github.com/hjtenklooster/claude-recovery/issues"
-Changelog = "https://github.com/hjtenklooster/claude-recovery/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/hjtenklooster/claude-file-recovery"
+Repository = "https://github.com/hjtenklooster/claude-file-recovery"
+Issues = "https://github.com/hjtenklooster/claude-file-recovery/issues"
+Changelog = "https://github.com/hjtenklooster/claude-file-recovery/blob/main/CHANGELOG.md"
 
 [project.scripts]
-claude-recovery = "claude_recovery.cli:app"
+claude-file-recovery = "claude_file_recovery.cli:app"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/claude_recovery"]
+packages = ["src/claude_file_recovery"]

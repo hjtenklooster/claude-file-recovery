@@ -1,12 +1,12 @@
-# VHS tape for recording a demo of the claude-recovery TUI
+# VHS tape for recording a demo of the claude-file-recovery TUI
 # https://github.com/charmbracelet/vhs
 #
 # Usage:
-#   cd /path/to/claude-recovery
+#   cd /path/to/claude-file-recovery
 #   python demo/generate_demo_data.py   # generate demo data first
 #   vhs demo/demo.tape                  # record the GIF
 #
-# Requirements: vhs, claude-recovery installed (uv tool install -e .)
+# Requirements: vhs, claude-file-recovery installed (uv tool install -e .)
 
 Output demo/demo.gif
 
@@ -18,7 +18,7 @@ Set TypingSpeed 40ms
 Set Shell zsh
 
 # Launch the TUI with demo data
-Type "claude-recovery --claude-dir demo/demo-claude-data"
+Type "claude-file-recovery --claude-dir demo/demo-claude-data"
 Enter
 Sleep 3s
 
