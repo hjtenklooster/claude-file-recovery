@@ -8,7 +8,11 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from claude_file_recovery.core.filters import SearchMode, filter_files, filter_by_timestamp
+from claude_file_recovery.core.filters import (
+    SearchMode,
+    filter_files,
+    filter_by_timestamp,
+)
 from claude_file_recovery.core.reconstructor import (
     reconstruct_at_timestamp,
     reconstruct_latest,
@@ -261,7 +265,10 @@ def extract_files(
 
     # Apply symlink deduplication if YAML provided
     if symlink_file and symlink_file.exists():
-        from claude_file_recovery.core.symlinks import load_symlink_yaml, merge_file_index
+        from claude_file_recovery.core.symlinks import (
+            load_symlink_yaml,
+            merge_file_index,
+        )
 
         groups = load_symlink_yaml(symlink_file)
         if groups:

@@ -40,6 +40,8 @@ class FileRecoveryApp(App):
         from claude_file_recovery.tui.symlink_review_screen import SymlinkReviewScreen
 
         self.push_screen(SymlinkReviewScreen())
-        from claude_file_recovery.tui.injection_review_screen import InjectionReviewScreen
+        from claude_file_recovery.tui.injection_review_screen import (
+            InjectionReviewScreen,
+        )
 
         self.push_screen(InjectionReviewScreen())
