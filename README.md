@@ -84,6 +84,25 @@ claude-file-recovery --claude-dir /path/to/claude-backup
 | `Ctrl+E` | Extract selected files |
 | `q` | Back / quit |
 
+## Privacy and Data Access
+
+claude-file-recovery runs entirely on your local machine.
+
+**What it reads:**
+- JSONL session files in `~/.claude/projects/` (or the directory you specify via `--claude-dir`)
+- File-history snapshots in `~/.claude/file-history/`
+
+**What it writes (only when you explicitly ask):**
+- Extracted files to a directory you specify via `--output`
+
+**What it does NOT do:**
+- No network requests — the tool works fully offline
+- No telemetry, analytics, or usage tracking
+- No data collection of any kind
+- No modification of your Claude Code session files (read-only access)
+
+The source code is MIT-licensed and fully open for audit.
+
 ## Contributing
 
 Contributions are welcome! Feel free to open an issue or submit a pull request.
